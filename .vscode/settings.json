@@ -1,4 +1,6 @@
 {
+    "cmake.generator": "Ninja",
+    "cmake.buildDirectory": "${workspaceFolder}/build/ninja",
     "cmake.debugConfig": {
         "args": [
             "scenes/cornell.json"
