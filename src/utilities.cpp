@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <iostream>
 
+int utilityCore::divup(int x, int n) { return (x + n - 1) / n; }
+
 float utilityCore::clamp(float f, float min, float max)
 {
     if (f < min)

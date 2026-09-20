@@ -1,0 +1,8 @@
+{
+    "cmake.debugConfig": {
+        "args": [
+            "scenes/cornell.json"
+        ],
+        "cwd": "${workspaceFolder}"
+    }
+}
