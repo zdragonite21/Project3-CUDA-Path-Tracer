@@ -13,6 +13,7 @@
 #include "sceneStructs.h"
 #include "thrust_utils.h"
 #include "utilities.h"
+#include "sampling.cuh"
 
 #define ERRORCHECK 0
 #define SORT_PATHS 1
@@ -47,6 +48,7 @@ makeSeededRandomEngine(int iter, int index, int depth) {
     int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
     return thrust::default_random_engine(h);
 }
+
 
 // Kernel that writes the image to the OpenGL PBO directly.
 __global__ void sendImageToPBO(uchar4 *pbo, glm::ivec2 resolution, int iter,
@@ -135,8 +137,6 @@ void pathtraceFree() {
  */
 __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
                                       PathSegment *pathSegments) {
-    const float focus_dist = 30.f;
-
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 

@@ -6,15 +6,6 @@
 
 #include <thrust/random.h>
 
-// CHECKITOUT
-/**
- * Computes a cosine-weighted random direction in a hemisphere.
- * Used for diffuse lighting.
- */
-__host__ __device__ glm::vec3 calculateRandomDirectionInHemisphere(
-    glm::vec3 normal, 
-    thrust::default_random_engine& rng);
-
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -40,7 +31,7 @@ __host__ __device__ glm::vec3 calculateRandomDirectionInHemisphere(
  *
  * You may need to change the parameter list for your purposes!
  */
-__host__ __device__ void scatterRay(
+__device__ void scatterRay(
     PathSegment& pathSegment,
     glm::vec3 intersect,
     glm::vec3 normal,

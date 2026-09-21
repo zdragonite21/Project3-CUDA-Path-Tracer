@@ -95,6 +95,8 @@ void Scene::loadFromJSON(const std::string& jsonName)
     camera.resolution.x = cameraData["RES"][0];
     camera.resolution.y = cameraData["RES"][1];
     float fovy = cameraData["FOVY"];
+    camera.lensRadius = cameraData["LENSRADIUS"];
+    camera.focalDistance = cameraData["FOCALDISTANCE"];
     state.iterations = cameraData["ITERATIONS"];
     state.traceDepth = cameraData["DEPTH"];
     state.imageName = cameraData["FILE"];
@@ -116,6 +118,7 @@ void Scene::loadFromJSON(const std::string& jsonName)
         2 * yscaled / (float)camera.resolution.y);
 
     camera.view = glm::normalize(camera.lookAt - camera.position);
+    
 
     //set up render camera stuff
     int arraylen = camera.resolution.x * camera.resolution.y;

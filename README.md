@@ -6,8 +6,7 @@ CUDA Path Tracer
 * (TODO) YOUR NAME HERE
 * Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
 
-### (TODO: Your README)
+### source code
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+- some of the sampling code was taken from my CIS 4610 path tracer
 

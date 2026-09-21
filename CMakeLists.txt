@@ -59,6 +59,7 @@ set(headers
     src/sceneStructs.h
     src/utilities.h
     src/thrust_utils.h
+    src/sampling.cuh
 )
 
 set(sources
@@ -72,6 +73,7 @@ set(sources
     src/thrust_utils.cu
     src/scene.cpp
     src/utilities.cpp
+    src/sampling.cu
 )
 
 set(imgui_headers
