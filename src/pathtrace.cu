@@ -3,8 +3,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cuda.h>
-#include <thrust/partition.h>
-#include <thrust/binary_search.h>
 #include <thrust/random.h>
 
 #include "glm/glm.hpp"
@@ -13,9 +11,13 @@
 #include "intersections.h"
 #include "scene.h"
 #include "sceneStructs.h"
+#include "thrust_utils.h"
 #include "utilities.h"
 
 #define ERRORCHECK 0
+#define SORT_PATHS 1
+#define COMPACT_MISSED 1
+#define COMPACT_TERMINATED 1
 
 #define FILENAME                                                               \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -286,12 +288,6 @@ __global__ void finalGather(int nPaths, glm::vec3 *image,
     }
 }
 
-struct IsPathAlive {
-    __host__ __device__ bool operator()(PathSegment ps) const {
-        return ps.remainingBounces > 0;
-    }
-};
-
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
@@ -370,6 +366,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         checkCUDAError("trace one bounce");
         depth++;
 
+#if SORT_PATHS
+        sort_paths(num_paths, dev_intersections, dev_isect_matIds, dev_paths);
+#endif
         // TODO:
         // --- Shading Stage ---
         // Shade path segments based on intersections and generate new rays by
@@ -379,33 +378,20 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // TODO: compare between directly shading the path segments and shading
         // path segments that have been reshuffled to be contiguous in memory.
 
-        auto zip_begin = thrust::make_zip_iterator(
-            thrust::make_tuple(dev_intersections, dev_paths));
-        thrust::sort_by_key(thrust::device, dev_isect_matIds,
-                            dev_isect_matIds + num_paths, zip_begin);
-        checkCUDAError("thrust: sorting by material");
-
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
             iter, num_paths, depth, dev_intersections, dev_isect_matIds,
             dev_paths, dev_materials);
         checkCUDAError("shader material");
 
-        // cull missed rays
-        auto new_end1 = thrust::lower_bound(
-            thrust::device,
-            dev_isect_matIds,
-            dev_isect_matIds + num_paths,
-            UINT8_MAX
-        );
-        checkCUDAError("thrust: cull the missed intersections");
-        num_paths = new_end1 - dev_isect_matIds;
+#if COMPACT_MISSED
+        // happens after shade material because we need
+        // to set the missed rays to have a color of 0
+        num_paths = compact_missed(num_paths, dev_isect_matIds);
+#endif
 
-        // cull terminated paths
-        auto new_end2 = thrust::partition(thrust::device, dev_paths,
-                                         dev_paths + num_paths, IsPathAlive{});
-        checkCUDAError("thrust: removing terminated paths");
-        num_paths = new_end2 - dev_paths;
-
+#if COMPACT_TERMINATED
+        num_paths = compact_terminated(num_paths, dev_paths);
+#endif
         if (num_paths < 1) {
             iterationComplete = true;
         }
