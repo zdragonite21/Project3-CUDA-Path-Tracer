@@ -20,6 +20,8 @@
 #define COMPACT_MISSED 1
 #define COMPACT_TERMINATED 1
 
+#define RUSSIAN_ROULETTE 1
+
 #define FILENAME                                                               \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -80,6 +82,10 @@ static Material *dev_materials = NULL;
 static PathSegment *dev_paths = NULL;
 static ShadeableIntersection *dev_intersections = NULL;
 static MatId *dev_isect_matIds = NULL;
+
+// TODO: use radiance for accumulating the final color? or use dev_image... fix
+// throughput setting things to vec3(0);
+static glm::vec3 *dev_radiance = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -167,7 +173,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
             ray.direction = glm::normalize(pFocus - ray.origin);
         }
 
-        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.throughput = glm::vec3(1.0f, 1.0f, 1.0f);
         segment.pixelIndex = index;
         segment.remainingBounces = traceDepth;
     }
@@ -251,20 +257,21 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
     if (idx < num_paths && pathSegments[idx].remainingBounces > 0) {
         ShadeableIntersection intersection = shadeableIntersections[idx];
         MatId matId = isect_matIds[idx];
+
+        thrust::default_random_engine rng =
+            makeSeededRandomEngine(iter, idx, depth);
         if (intersection.t > 0.0f &&
             matId != UINT8_MAX) // if the intersection exists...
         {
-            thrust::default_random_engine rng =
-                makeSeededRandomEngine(iter, idx, depth);
-
             Material material = materials[matId];
             glm::vec3 materialColor = material.color;
 
             // If the material indicates that the object was a light, "light"
             // the ray
             if (material.emittance > 0.0f) {
-                pathSegments[idx].color *= (materialColor * material.emittance);
+                pathSegments[idx].throughput *= (materialColor * material.emittance);
                 pathSegments[idx].remainingBounces = 0;
+                return;
             }
             // Otherwise, do some pseudo-lighting computation. This is actually
             // more like what you would expect from shading in a rasterizer like
@@ -283,25 +290,24 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
             // opacity". This can be useful for post-processing and image
             // compositing.
         } else {
-            pathSegments[idx].color = glm::vec3(0.0f);
+            pathSegments[idx].throughput = glm::vec3(0.0f);
         }
 
-        // russian roulette
-        if (iter > 3) {
-            thrust::default_random_engine rng =
-                makeSeededRandomEngine(iter, idx, depth);
+#if RUSSIAN_ROULETTE
+        if (depth > 3) {
             thrust::uniform_real_distribution<float> u01(0, 1);
 
-            glm::vec3 &throughput = pathSegments[idx].color;
-            float killp = max(throughput.x, max(throughput.y, throughput.z));
-            killp = glm::clamp(killp, 0.05f, 0.95f);
-            if (u01(rng) > killp) {
-                pathSegments[idx].color = glm::vec3(0);
+            glm::vec3 &throughput = pathSegments[idx].throughput;
+            float surviveP = max(throughput.x, max(throughput.y, throughput.z));
+            surviveP = glm::clamp(surviveP, 0.05f, 0.95f);
+            if (u01(rng) > surviveP) {
+                pathSegments[idx].throughput = glm::vec3(0);
                 pathSegments[idx].remainingBounces = 0;
-            } else {
-                throughput /= killp;
+                return;
             }
+            throughput /= surviveP;
         }
+#endif
     }
 }
 
@@ -312,7 +318,7 @@ __global__ void finalGather(int nPaths, glm::vec3 *image,
 
     if (index < nPaths) {
         PathSegment iterationPath = iterationPaths[index];
-        image[iterationPath.pixelIndex] += iterationPath.color;
+        image[iterationPath.pixelIndex] += iterationPath.throughput;
     }
 }
 

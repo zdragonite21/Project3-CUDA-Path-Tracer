@@ -23,10 +23,10 @@ __device__ void scatterRay(PathSegment &pathSegment,
     float lambert = glm::abs(glm::dot(wi, normal));
     
     if (pdf == 0.0) {
-        pathSegment.color = glm::vec3(0.0);
+        pathSegment.throughput = glm::vec3(0.0);
         pathSegment.remainingBounces = 0;
     } else {
-        pathSegment.color *= bsdf * lambert / pdf;
+        pathSegment.throughput *= bsdf * lambert / pdf;
         pathSegment.ray = Ray{intersect, wi};
         pathSegment.remainingBounces--;
     }

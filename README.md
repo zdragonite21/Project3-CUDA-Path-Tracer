@@ -10,6 +10,7 @@ CUDA Path Tracer
 - depth of field (thin lens approx.)
 - material sorting + path compaction
 - anti-aliasing
+- russian roulette
 
 
 ### source code
