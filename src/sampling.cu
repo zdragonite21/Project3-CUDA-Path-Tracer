@@ -26,6 +26,14 @@ calculateRandomDirectionInCosineHemisphere(glm::vec3 normal,
     return dir.z * normal + dir.y * tan + dir.x * bit;
 }
 
+__device__ glm::vec2 sampleUniformDisk(thrust::default_random_engine &rng) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+
+    glm::vec2 xi(u01(rng), u01(rng));
+
+    return glm::vec2(squareToDiskConcentric(xi));
+}
+
 __device__ glm::vec3 squareToDiskConcentric(glm::vec2 xi) {
     float x = xi.x * 2.f - 1.f;
     float y = xi.y * 2.f - 1.f;

@@ -9,11 +9,11 @@
 #include "glm/gtx/norm.hpp"
 #include "interactions.h"
 #include "intersections.h"
+#include "sampling.cuh"
 #include "scene.h"
 #include "sceneStructs.h"
 #include "thrust_utils.h"
 #include "utilities.h"
-#include "sampling.cuh"
 
 #define ERRORCHECK 0
 #define SORT_PATHS 1
@@ -48,7 +48,6 @@ makeSeededRandomEngine(int iter, int index, int depth) {
     int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
     return thrust::default_random_engine(h);
 }
-
 
 // Kernel that writes the image to the OpenGL PBO directly.
 __global__ void sendImageToPBO(uchar4 *pbo, glm::ivec2 resolution, int iter,
@@ -149,17 +148,26 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
         thrust::uniform_real_distribution<float> u01(0, 1);
 
         glm::vec2 offset = glm::vec2(u01(rng), u01(rng));
-        glm::vec2 sample = glm::vec2(x, y) + offset;
+        glm::vec2 sub_pixel_sample = glm::vec2(x, y) + offset;
 
-        segment.ray.origin = cam.position;
+        Ray &ray = segment.ray;
+        ray.origin = cam.position;
+        ray.direction = glm::normalize(
+            cam.view -
+            cam.right * cam.pixelLength.x *
+                (sub_pixel_sample.x - (float)cam.resolution.x * 0.5f) -
+            cam.up * cam.pixelLength.y *
+                (sub_pixel_sample.y - (float)cam.resolution.y * 0.5f));
+
+        if (cam.lensRadius > 0.0) {
+            float t = cam.focalDistance / glm::dot(ray.direction, cam.view);
+            glm::vec3 pFocus = ray.origin + ray.direction * t;
+            glm::vec2 pLens = cam.lensRadius * sampleUniformDisk(rng);
+            ray.origin += cam.right * pLens.x + cam.up * pLens.y;
+            ray.direction = glm::normalize(pFocus - ray.origin);
+        }
+
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
-
-        segment.ray.direction =
-            glm::normalize(cam.view -
-                           cam.right * cam.pixelLength.x *
-                               (sample.x - (float)cam.resolution.x * 0.5f) -
-                           cam.up * cam.pixelLength.y *
-                               (sample.y - (float)cam.resolution.y * 0.5f));
         segment.pixelIndex = index;
         segment.remainingBounces = traceDepth;
     }

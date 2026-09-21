@@ -40,7 +40,7 @@
         "LOOKAT":[0.0,5.0,0.0],
         "UP":[0.0,1.0,0.0],
         "LENSRADIUS":2.0,
-        "FOCALDISTANCE":10.0
+        "FOCALDISTANCE":12.0
     },
     "Objects":
     [
@@ -90,6 +90,13 @@
             "TYPE":"sphere",
             "MATERIAL":"specular_white",
             "TRANS":[-1.0,4.0,-1.0],
+            "ROTAT":[0.0,0.0,0.0],
+            "SCALE":[3.0,3.0,3.0]
+        },
+        {
+            "TYPE":"sphere2",
+            "MATERIAL":"specular_white",
+            "TRANS":[1.0,3.0,1.0],
             "ROTAT":[0.0,0.0,0.0],
             "SCALE":[3.0,3.0,3.0]
         }
