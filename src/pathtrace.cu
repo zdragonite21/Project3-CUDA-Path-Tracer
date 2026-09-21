@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cuda.h>
 #include <thrust/partition.h>
+#include <thrust/binary_search.h>
 #include <thrust/random.h>
 
 #include "glm/glm.hpp"
@@ -206,7 +207,7 @@ __global__ void computeIntersections(int depth, int num_paths,
 
         if (hit_geom_index == -1) {
             intersections[path_index].t = -1.0f;
-            isect_matIds[path_index] = INT_MAX;
+            isect_matIds[path_index] = UINT8_MAX;
         } else {
             // The ray hits something
             intersections[path_index].t = t_min;
@@ -234,7 +235,7 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
         ShadeableIntersection intersection = shadeableIntersections[idx];
         MatId matId = isect_matIds[idx];
         if (intersection.t > 0.0f &&
-            matId != INT_MAX) // if the intersection exists...
+            matId != UINT8_MAX) // if the intersection exists...
         {
             // Set up the RNG
             // LOOK: this is how you use thrust's RNG! Please look at
@@ -378,19 +379,32 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // TODO: compare between directly shading the path segments and shading
         // path segments that have been reshuffled to be contiguous in memory.
 
-        // auto begin = thrust::make_zip_iterator(
-        //     thrust::make_tuple(dev_intersections, dev_paths)
-        // );
+        auto zip_begin = thrust::make_zip_iterator(
+            thrust::make_tuple(dev_intersections, dev_paths));
+        thrust::sort_by_key(thrust::device, dev_isect_matIds,
+                            dev_isect_matIds + num_paths, zip_begin);
+        checkCUDAError("thrust: sorting by material");
 
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
             iter, num_paths, depth, dev_intersections, dev_isect_matIds,
             dev_paths, dev_materials);
         checkCUDAError("shader material");
 
-        auto new_end = thrust::partition(thrust::device, dev_paths,
+        // cull missed rays
+        auto new_end1 = thrust::lower_bound(
+            thrust::device,
+            dev_isect_matIds,
+            dev_isect_matIds + num_paths,
+            UINT8_MAX
+        );
+        checkCUDAError("thrust: cull the missed intersections");
+        num_paths = new_end1 - dev_isect_matIds;
+
+        // cull terminated paths
+        auto new_end2 = thrust::partition(thrust::device, dev_paths,
                                          dev_paths + num_paths, IsPathAlive{});
         checkCUDAError("thrust: removing terminated paths");
-        num_paths = new_end - dev_paths;
+        num_paths = new_end2 - dev_paths;
 
         if (num_paths < 1) {
             iterationComplete = true;
