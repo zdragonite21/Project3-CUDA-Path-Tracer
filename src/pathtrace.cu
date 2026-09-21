@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cuda.h>
 #include <thrust/execution_policy.h>
+#include <thrust/partition.h>
 #include <thrust/random.h>
 #include <thrust/remove.h>
 
@@ -204,6 +205,7 @@ __global__ void computeIntersections(int depth, int num_paths,
 
         if (hit_geom_index == -1) {
             intersections[path_index].t = -1.0f;
+            intersections[path_index].materialId = INT_MAX;
         } else {
             // The ray hits something
             intersections[path_index].t = t_min;
@@ -229,7 +231,8 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_paths && pathSegments[idx].remainingBounces > 0) {
         ShadeableIntersection intersection = shadeableIntersections[idx];
-        if (intersection.t > 0.0f) // if the intersection exists...
+        if (intersection.t > 0.0f &&
+            intersection.materialId != INT_MAX) // if the intersection exists...
         {
             // Set up the RNG
             // LOOK: this is how you use thrust's RNG! Please look at
@@ -280,10 +283,9 @@ __global__ void finalGather(int nPaths, glm::vec3 *image,
     }
 }
 
-struct IsMissed {
-    __host__ __device__
-    bool operator()(ShadeableIntersection isect) const {
-        return isect.t < 0;
+struct IsPathAlive {
+    __host__ __device__ bool operator()(PathSegment ps) const {
+        return ps.remainingBounces > 0;
     }
 };
 
@@ -366,9 +368,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         cudaDeviceSynchronize();
         depth++;
 
-        // auto new_end = thrust::remove_if(dev_paths, dev_paths + num_paths, IsMissed{});
-        // num_paths = new_end - dev_paths;
-
         // TODO:
         // --- Shading Stage ---
         // Shade path segments based on intersections and generate new rays by
@@ -379,8 +378,19 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // path segments that have been reshuffled to be contiguous in memory.
 
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
-            iter, num_paths, depth, dev_intersections, dev_paths, dev_materials);
+            iter, num_paths, depth, dev_intersections, dev_paths,
+            dev_materials);
         checkCUDAError("shader material");
+
+        // auto new_end =
+        //     thrust::partition(thrust::device, dev_paths, dev_paths + num_paths,
+        //                       IsPathAlive{});
+        // checkCUDAError("thrust: removing terminated paths");
+
+        // num_paths = new_end - dev_paths;
+        if (num_paths < 1) {
+            iterationComplete = true;
+        }
 
         if (guiData != NULL) {
             guiData->TracedDepth = depth;
@@ -389,7 +399,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     // Assemble this iteration and apply it to the image
     dim3 numBlocksPixels = utilityCore::divup(pixelcount, blockSize1d);
-    finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image,
+    finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image,
                                                   dev_paths);
 
     ///////////////////////////////////////////////////////////////////////////
