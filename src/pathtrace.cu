@@ -3,10 +3,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cuda.h>
-#include <thrust/execution_policy.h>
 #include <thrust/partition.h>
 #include <thrust/random.h>
-#include <thrust/remove.h>
 
 #include "glm/glm.hpp"
 #include "glm/gtx/norm.hpp"
@@ -16,7 +14,7 @@
 #include "sceneStructs.h"
 #include "utilities.h"
 
-#define ERRORCHECK 1
+#define ERRORCHECK 0
 
 #define FILENAME                                                               \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -77,6 +75,7 @@ static Geom *dev_geoms = NULL;
 static Material *dev_materials = NULL;
 static PathSegment *dev_paths = NULL;
 static ShadeableIntersection *dev_intersections = NULL;
+static MatId *dev_isect_matIds = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -106,7 +105,8 @@ void pathtraceInit(Scene *scene) {
     cudaMemset(dev_intersections, 0,
                pixelcount * sizeof(ShadeableIntersection));
 
-    // TODO: initialize any extra device memeory you need
+    cudaMalloc(&dev_isect_matIds, pixelcount * sizeof(MatId));
+    cudaMemset(dev_isect_matIds, 0, pixelcount * sizeof(MatId));
 
     checkCUDAError("pathtraceInit");
 }
@@ -117,7 +117,7 @@ void pathtraceFree() {
     cudaFree(dev_geoms);
     cudaFree(dev_materials);
     cudaFree(dev_intersections);
-    // TODO: clean up any extra device memory you created
+    cudaFree(dev_isect_matIds);
 
     checkCUDAError("pathtraceFree");
 }
@@ -162,7 +162,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
 __global__ void computeIntersections(int depth, int num_paths,
                                      PathSegment *pathSegments, Geom *geoms,
                                      int geoms_size,
-                                     ShadeableIntersection *intersections) {
+                                     ShadeableIntersection *intersections,
+                                     MatId *isect_matIds) {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (path_index < num_paths) {
@@ -205,12 +206,11 @@ __global__ void computeIntersections(int depth, int num_paths,
 
         if (hit_geom_index == -1) {
             intersections[path_index].t = -1.0f;
-            intersections[path_index].materialId = INT_MAX;
+            isect_matIds[path_index] = INT_MAX;
         } else {
             // The ray hits something
             intersections[path_index].t = t_min;
-            intersections[path_index].materialId =
-                geoms[hit_geom_index].materialid;
+            isect_matIds[path_index] = geoms[hit_geom_index].materialid;
             intersections[path_index].surfaceNormal = normal;
         }
     }
@@ -227,12 +227,14 @@ __global__ void computeIntersections(int depth, int num_paths,
 // bump mapping.
 __global__ void shadeMaterial(int iter, int num_paths, int depth,
                               ShadeableIntersection *shadeableIntersections,
-                              PathSegment *pathSegments, Material *materials) {
+                              MatId *isect_matIds, PathSegment *pathSegments,
+                              Material *materials) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_paths && pathSegments[idx].remainingBounces > 0) {
         ShadeableIntersection intersection = shadeableIntersections[idx];
+        MatId matId = isect_matIds[idx];
         if (intersection.t > 0.0f &&
-            intersection.materialId != INT_MAX) // if the intersection exists...
+            matId != INT_MAX) // if the intersection exists...
         {
             // Set up the RNG
             // LOOK: this is how you use thrust's RNG! Please look at
@@ -241,7 +243,7 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
                 makeSeededRandomEngine(iter, idx, depth);
             thrust::uniform_real_distribution<float> u01(0, 1);
 
-            Material material = materials[intersection.materialId];
+            Material material = materials[matId];
             glm::vec3 materialColor = material.color;
 
             // If the material indicates that the object was a light, "light"
@@ -355,17 +357,16 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     bool iterationComplete = false;
     while (!iterationComplete && depth < traceDepth) {
         // clean shading chunks
-        cudaMemset(dev_intersections, 0,
-                   pixelcount * sizeof(ShadeableIntersection));
+        // cudaMemset(dev_intersections, 0,
+        //            pixelcount * sizeof(ShadeableIntersection));
 
         // tracing
         dim3 numblocksPathSegmentTracing =
             utilityCore::divup(num_paths, blockSize1d);
         computeIntersections<<<numblocksPathSegmentTracing, blockSize1d>>>(
             depth, num_paths, dev_paths, dev_geoms, hst_scene->geoms.size(),
-            dev_intersections);
+            dev_intersections, dev_isect_matIds);
         checkCUDAError("trace one bounce");
-        cudaDeviceSynchronize();
         depth++;
 
         // TODO:
@@ -377,17 +378,20 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // TODO: compare between directly shading the path segments and shading
         // path segments that have been reshuffled to be contiguous in memory.
 
+        // auto begin = thrust::make_zip_iterator(
+        //     thrust::make_tuple(dev_intersections, dev_paths)
+        // );
+
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
-            iter, num_paths, depth, dev_intersections, dev_paths,
-            dev_materials);
+            iter, num_paths, depth, dev_intersections, dev_isect_matIds,
+            dev_paths, dev_materials);
         checkCUDAError("shader material");
 
-        // auto new_end =
-        //     thrust::partition(thrust::device, dev_paths, dev_paths + num_paths,
-        //                       IsPathAlive{});
-        // checkCUDAError("thrust: removing terminated paths");
+        auto new_end = thrust::partition(thrust::device, dev_paths,
+                                         dev_paths + num_paths, IsPathAlive{});
+        checkCUDAError("thrust: removing terminated paths");
+        num_paths = new_end - dev_paths;
 
-        // num_paths = new_end - dev_paths;
         if (num_paths < 1) {
             iterationComplete = true;
         }

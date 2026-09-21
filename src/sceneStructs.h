@@ -9,6 +9,8 @@
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
+using MatId = uint8_t;
+
 enum GeomType
 {
     SPHERE,
@@ -83,5 +85,4 @@ struct ShadeableIntersection
 {
   float t;
   glm::vec3 surfaceNormal;
-  int materialId;
 };
