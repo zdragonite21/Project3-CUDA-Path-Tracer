@@ -234,8 +234,8 @@ __global__ void computeIntersections(int depth, int num_paths,
         } else {
             // The ray hits something
             intersections[path_index].t = t_min;
-            isect_matIds[path_index] = geoms[hit_geom_index].materialid;
             intersections[path_index].surfaceNormal = normal;
+            isect_matIds[path_index] = geoms[hit_geom_index].materialid;
         }
     }
 }
@@ -268,8 +268,8 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
 
             // If the material indicates that the object was a light, "light"
             // the ray
-            if (material.emittance > 0.0f) {
-                pathSegments[idx].throughput *= (materialColor * material.emittance);
+            if (material.emissiveStrength > 0.0f) {
+                pathSegments[idx].throughput *= (materialColor * material.emissiveStrength);
                 pathSegments[idx].remainingBounces = 0;
                 return;
             }

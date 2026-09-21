@@ -11,20 +11,14 @@
 
 using MatId = uint8_t;
 
-enum GeomType
-{
-    SPHERE,
-    CUBE
-};
+enum GeomType { SPHERE, CUBE };
 
-struct Ray
-{
+struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
 };
 
-struct Geom
-{
+struct Geom {
     enum GeomType type;
     int materialid;
     glm::vec3 translation;
@@ -35,22 +29,23 @@ struct Geom
     glm::mat4 invTranspose;
 };
 
-struct Material
-{
+enum MatType { DIFFUSE, SPECULAR, EMISSIVE };
+
+struct Material {
+    MatType type;
     glm::vec3 color;
-    struct
-    {
+    struct {
         float exponent;
         glm::vec3 color;
     } specular;
+    float roughness;
     float hasReflective;
     float hasRefractive;
     float indexOfRefraction;
-    float emittance;
+    float emissiveStrength;
 };
 
-struct Camera
-{
+struct Camera {
     glm::ivec2 resolution;
     glm::vec3 position;
     glm::vec3 lookAt;
@@ -63,8 +58,7 @@ struct Camera
     float focalDistance;
 };
 
-struct RenderState
-{
+struct RenderState {
     Camera camera;
     unsigned int iterations;
     int traceDepth;
@@ -72,8 +66,7 @@ struct RenderState
     std::string imageName;
 };
 
-struct PathSegment
-{
+struct PathSegment {
     Ray ray;
     glm::vec3 throughput;
     int pixelIndex;
@@ -83,8 +76,7 @@ struct PathSegment
 // Use with a corresponding PathSegment to do:
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
-struct ShadeableIntersection
-{
-  float t;
-  glm::vec3 surfaceNormal;
+struct ShadeableIntersection {
+    glm::vec3 surfaceNormal;
+    float t;
 };
