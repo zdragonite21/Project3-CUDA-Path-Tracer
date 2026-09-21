@@ -285,6 +285,23 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
         } else {
             pathSegments[idx].color = glm::vec3(0.0f);
         }
+
+        // russian roulette
+        if (iter > 3) {
+            thrust::default_random_engine rng =
+                makeSeededRandomEngine(iter, idx, depth);
+            thrust::uniform_real_distribution<float> u01(0, 1);
+
+            glm::vec3 &throughput = pathSegments[idx].color;
+            float killp = max(throughput.x, max(throughput.y, throughput.z));
+            killp = glm::clamp(killp, 0.05f, 0.95f);
+            if (u01(rng) > killp) {
+                pathSegments[idx].color = glm::vec3(0);
+                pathSegments[idx].remainingBounces = 0;
+            } else {
+                throughput /= killp;
+            }
+        }
     }
 }
 
