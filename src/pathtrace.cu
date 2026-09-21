@@ -135,6 +135,8 @@ void pathtraceFree() {
  */
 __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
                                       PathSegment *pathSegments) {
+    const float focus_dist = 30.f;
+
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
@@ -142,17 +144,22 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
         int index = x + (y * cam.resolution.x);
         PathSegment &segment = pathSegments[index];
 
+        thrust::default_random_engine rng =
+            makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> u01(0, 1);
+
+        glm::vec2 offset = glm::vec2(u01(rng), u01(rng));
+        glm::vec2 sample = glm::vec2(x, y) + offset;
+
         segment.ray.origin = cam.position;
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-        // TODO: implement antialiasing by jittering the ray
         segment.ray.direction =
             glm::normalize(cam.view -
                            cam.right * cam.pixelLength.x *
-                               ((float)x - (float)cam.resolution.x * 0.5f) -
+                               (sample.x - (float)cam.resolution.x * 0.5f) -
                            cam.up * cam.pixelLength.y *
-                               ((float)y - (float)cam.resolution.y * 0.5f));
-
+                               (sample.y - (float)cam.resolution.y * 0.5f));
         segment.pixelIndex = index;
         segment.remainingBounces = traceDepth;
     }
@@ -239,12 +246,8 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
         if (intersection.t > 0.0f &&
             matId != UINT8_MAX) // if the intersection exists...
         {
-            // Set up the RNG
-            // LOOK: this is how you use thrust's RNG! Please look at
-            // makeSeededRandomEngine as well.
             thrust::default_random_engine rng =
                 makeSeededRandomEngine(iter, idx, depth);
-            thrust::uniform_real_distribution<float> u01(0, 1);
 
             Material material = materials[matId];
             glm::vec3 materialColor = material.color;
