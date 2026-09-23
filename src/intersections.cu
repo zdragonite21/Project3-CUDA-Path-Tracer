@@ -8,8 +8,8 @@ __host__ __device__ float boxIntersectionTest(
     bool &outside)
 {
     Ray q;
-    q.origin    =                multiplyMV(box.inverseTransform, glm::vec4(r.origin   , 1.0f));
-    q.direction = glm::normalize(multiplyMV(box.inverseTransform, glm::vec4(r.direction, 0.0f)));
+    q.origin    =                multiplyMV(box.transform.inverse, glm::vec4(r.origin   , 1.0f));
+    q.direction = glm::normalize(multiplyMV(box.transform.inverse, glm::vec4(r.direction, 0.0f)));
 
     float tmin = -1e38f;
     float tmax = 1e38f;
@@ -48,8 +48,8 @@ __host__ __device__ float boxIntersectionTest(
             tmin_n = tmax_n;
             outside = false;
         }
-        intersectionPoint = multiplyMV(box.transform, glm::vec4(getPointOnRay(q, tmin), 1.0f));
-        normal = glm::normalize(multiplyMV(box.invTranspose, glm::vec4(tmin_n, 0.0f)));
+        intersectionPoint = multiplyMV(box.transform.matrix, glm::vec4(getPointOnRay(q, tmin), 1.0f));
+        normal = glm::normalize(multiplyMV(box.transform.invTranspose, glm::vec4(tmin_n, 0.0f)));
         return glm::length(r.origin - intersectionPoint);
     }
 
@@ -65,8 +65,8 @@ __host__ __device__ float sphereIntersectionTest(
 {
     float radius = .5;
 
-    glm::vec3 ro = multiplyMV(sphere.inverseTransform, glm::vec4(r.origin, 1.0f));
-    glm::vec3 rd = glm::normalize(multiplyMV(sphere.inverseTransform, glm::vec4(r.direction, 0.0f)));
+    glm::vec3 ro = multiplyMV(sphere.transform.inverse, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(sphere.transform.inverse, glm::vec4(r.direction, 0.0f)));
 
     Ray rt;
     rt.origin = ro;
@@ -102,8 +102,8 @@ __host__ __device__ float sphereIntersectionTest(
 
     glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
 
-    intersectionPoint = multiplyMV(sphere.transform, glm::vec4(objspaceIntersection, 1.f));
-    normal = glm::normalize(multiplyMV(sphere.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
+    intersectionPoint = multiplyMV(sphere.transform.matrix, glm::vec4(objspaceIntersection, 1.f));
+    normal = glm::normalize(multiplyMV(sphere.transform.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
     if (!outside)
     {
         normal = -normal;

@@ -1,29 +1,13 @@
 #include "sampling.cuh"
 #include "utilities.h"
-
-__device__ void coordinateSystem(glm::vec3 in_nor, glm::vec3 &out_tan,
-                                 glm::vec3 &out_bit) {
-    if (abs(in_nor.x) > abs(in_nor.y))
-        out_tan = glm::vec3(-in_nor.z, 0, in_nor.x) /
-                  sqrt(in_nor.x * in_nor.x + in_nor.z * in_nor.z);
-    else
-        out_tan = glm::vec3(0, in_nor.z, -in_nor.y) /
-                  sqrt(in_nor.y * in_nor.y + in_nor.z * in_nor.z);
-    out_bit = glm::cross(in_nor, out_tan);
-}
-
 __device__ glm::vec3
-calculateRandomDirectionInCosineHemisphere(glm::vec3 normal,
-                                           thrust::default_random_engine &rng) {
+calculateRandomDirectionInCosineHemisphere(thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
     glm::vec2 xi(u01(rng), u01(rng));
     glm::vec3 dir = squareToHemisphereCosine(xi);
 
-    glm::vec3 tan;
-    glm::vec3 bit;
-    coordinateSystem(normal, tan, bit);
-    return dir.z * normal + dir.y * tan + dir.x * bit;
+    return dir;
 }
 
 __device__ glm::vec2 sampleUniformDisk(thrust::default_random_engine &rng) {
