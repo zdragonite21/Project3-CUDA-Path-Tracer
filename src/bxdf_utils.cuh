@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
+#include "sceneStructs.h"
 
 // bxdf utils
 namespace bx {
@@ -80,5 +81,8 @@ static __device__ bool Refract(glm::vec3 wo, glm::vec3 n, float eta, glm::vec3 &
     float cosThetaT = glm::sqrt(1.f - sin2ThetaT);
     wt = eta * -wo + (eta * cosThetaI - cosThetaT) * n;
     return true;
+}
+static __device__ Ray SpawnRay(glm::vec3 pos, glm::vec3 wi) {
+    return Ray{pos + wi * 0.0001f, wi};
 }
 } // namespace bx

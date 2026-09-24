@@ -180,12 +180,12 @@ __device__ glm::vec3 evalBSDF() { return glm::vec3(0); }
 
 __device__ float pdfBSDF() { return 0.0; }
 
-__device__ void scatterRay(PathSegment &pathSegment, glm::vec3 intersect,
+__device__ void scatterRay(PathSegment &pathSegment, glm::vec3 p,
                            glm::vec3 normal, const Material &m,
                            thrust::default_random_engine &rng) {
 
     BSDFSample s =
-        sampleBSDF(intersect, normal, -pathSegment.ray.direction, m, rng);
+        sampleBSDF(p, normal, -pathSegment.ray.direction, m, rng);
 
     float lambert = glm::abs(glm::dot(s.wi, normal));
 
@@ -194,7 +194,7 @@ __device__ void scatterRay(PathSegment &pathSegment, glm::vec3 intersect,
         pathSegment.remainingBounces = 0;
     } else {
         pathSegment.throughput *= s.f * lambert / s.pdf;
-        pathSegment.ray = Ray{intersect, s.wi};
+        pathSegment.ray = bx::SpawnRay(p, s.wi);
         pathSegment.remainingBounces--;
     }
 }
