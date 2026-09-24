@@ -61,6 +61,7 @@ set(headers
     src/thrust_utils.h
     src/sampling.cuh
     src/bxdf_utils.cuh
+    src/light_sampling.h
 )
 
 set(sources
@@ -75,6 +76,7 @@ set(sources
     src/scene.cpp
     src/utilities.cpp
     src/sampling.cu
+    src/light_sampling.cu
 )
 
 set(imgui_headers
