@@ -103,6 +103,23 @@ enum class BxDFFlag : uint8_t {
     Specular = 1 << 4,
 };
 
+// overload operators because BxFFlag is strongly typed
+__host__ __device__ constexpr BxDFFlag operator|(BxDFFlag a, BxDFFlag b) {
+    return static_cast<BxDFFlag>(
+        static_cast<uint8_t>(a) | static_cast<uint8_t>(b)
+    );
+}
+
+__host__ __device__ constexpr BxDFFlag operator&(BxDFFlag a, BxDFFlag b) {
+    return static_cast<BxDFFlag>(
+        static_cast<uint8_t>(a) & static_cast<uint8_t>(b)
+    );
+}
+
+__host__ __device__ constexpr BxDFFlag& operator|=(BxDFFlag& a, BxDFFlag b) {
+    return a = a | b;
+}
+
 struct BSDFSample {
     glm::vec3 wi;
     float pdf;
