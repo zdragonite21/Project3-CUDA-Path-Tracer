@@ -1,102 +1,99 @@
 #include "intersections.h"
+#include <cfloat>
 
 __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
                                               glm::vec3 &intersectionPoint,
                                               glm::vec3 &normal,
                                               bool &outside) {
-    Ray q;
-    q.origin = multiplyMV(box.transform.inverse, glm::vec4(r.origin, 1.0f));
-    q.direction = glm::normalize(
-        multiplyMV(box.transform.inverse, glm::vec4(r.direction, 0.0f)));
 
-    float tmin = -1e38f;
-    float tmax = 1e38f;
-    glm::vec3 tmin_n;
-    glm::vec3 tmax_n;
-    for (int xyz = 0; xyz < 3; ++xyz) {
-        float qdxyz = q.direction[xyz];
-        /*if (glm::abs(qdxyz) > 0.00001f)*/
-        {
-            float t1 = (-0.5f - q.origin[xyz]) / qdxyz;
-            float t2 = (+0.5f - q.origin[xyz]) / qdxyz;
-            float ta = glm::min(t1, t2);
-            float tb = glm::max(t1, t2);
-            glm::vec3 n;
-            n[xyz] = t2 < t1 ? +1 : -1;
-            if (ta > 0 && ta > tmin) {
-                tmin = ta;
-                tmin_n = n;
-            }
-            if (tb < tmax) {
-                tmax = tb;
-                tmax_n = n;
-            }
+    glm::vec3 ro = multiplyMV(box.transform.inverse, glm::vec4(r.org, 1.0f));
+    glm::vec3 rd = multiplyMV(box.transform.inverse, glm::vec4(r.dir, 0.0f));
+
+    float tNear = -FLT_MAX;
+    float tFar = FLT_MAX;
+
+    for (int axis = 0; axis < 3; ++axis) {
+        if (rd[axis] == 0.0f) {
+            if (ro[axis] < -0.5f || ro[axis] > 0.5f)
+                return -1.0f;
+            continue;
         }
+
+        float t0 = (-0.5f - ro[axis]) / rd[axis];
+        float t1 = (0.5f - ro[axis]) / rd[axis];
+        if (t0 > t1) {
+            float tmp = t0;
+            t0 = t1;
+            t1 = tmp;
+        }
+
+        tNear = glm::max(tNear, t0);
+        tFar = glm::min(tFar, t1);
     }
 
-    if (tmax >= tmin && tmax > 0) {
-        outside = true;
-        if (tmin <= 0) {
-            tmin = tmax;
-            tmin_n = tmax_n;
-            outside = false;
-        }
-        intersectionPoint = multiplyMV(box.transform.matrix,
-                                       glm::vec4(getPointOnRay(q, tmin), 1.0f));
-        normal = glm::normalize(
-            multiplyMV(box.transform.invTranspose, glm::vec4(tmin_n, 0.0f)));
-        return glm::length(r.origin - intersectionPoint);
+    if (tNear > tFar || tFar <= 0.0f) {
+        return -1.0f;
     }
 
-    return -1;
+    outside = tNear > 0.0f;
+    float t = outside ? tNear : tFar;
+
+    glm::vec3 p = ro + t * rd;
+
+    glm::vec3 a = glm::abs(p);
+
+    glm::vec3 nor(0.0f);
+    if (a.x > a.y && a.x > a.z)
+        nor.x = glm::sign(p.x);
+    else if (a.y > a.z)
+        nor.y = glm::sign(p.y);
+    else
+        nor.z = glm::sign(p.z);
+
+    intersectionPoint = getPointOnRay(r, t);
+    normal = glm::normalize(
+        multiplyMV(box.transform.invTranspose, glm::vec4(nor, 0.0f)));
+
+    return t;
 }
 
 __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
                                                  glm::vec3 &intersectionPoint,
                                                  glm::vec3 &normal,
                                                  bool &outside) {
-    float radius = .5;
+    glm::vec3 ro = multiplyMV(sphere.transform.inverse, glm::vec4(r.org, 1.0f));
+    glm::vec3 rd = multiplyMV(sphere.transform.inverse, glm::vec4(r.dir, 0.0f));
 
-    glm::vec3 ro =
-        multiplyMV(sphere.transform.inverse, glm::vec4(r.origin, 1.0f));
-    glm::vec3 rd = glm::normalize(
-        multiplyMV(sphere.transform.inverse, glm::vec4(r.direction, 0.0f)));
+    float a = glm::dot(rd, rd);
+    float half_b = glm::dot(ro, rd);
+    float c = glm::dot(ro, ro) - 1.0f;
 
-    Ray rt;
-    rt.origin = ro;
-    rt.direction = rd;
-
-    float vDotDirection = glm::dot(rt.origin, rt.direction);
-    float radicand = vDotDirection * vDotDirection -
-                     (glm::dot(rt.origin, rt.origin) - powf(radius, 2));
-    if (radicand < 0) {
-        return -1;
+    float disc = half_b * half_b - a * c;
+    if (disc < 0.f) {
+        return -1.f;
     }
 
-    float squareRoot = sqrt(radicand);
-    float firstTerm = -vDotDirection;
-    float t1 = firstTerm + squareRoot;
-    float t2 = firstTerm - squareRoot;
+    float sqrtD = glm::sqrt(disc);
 
-    float t = 0;
-    if (t1 < 0 && t2 < 0) {
-        return -1;
-    } else if (t1 > 0 && t2 > 0) {
-        t = min(t1, t2);
-        outside = true;
-    } else {
-        t = max(t1, t2);
-        outside = false;
+    float t = (-half_b - sqrtD) / a;
+
+    constexpr float eps = 1e-4f;
+    if (t <= eps) {
+        t = (-half_b + sqrtD) / a;
+        if (t <= eps) {
+            return -1.f;
+        }
     }
 
-    glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
+    glm::vec3 p = ro + rd * t;
 
-    intersectionPoint = multiplyMV(sphere.transform.matrix,
-                                   glm::vec4(objspaceIntersection, 1.f));
-    normal = glm::normalize(multiplyMV(sphere.transform.invTranspose,
-                                       glm::vec4(objspaceIntersection, 0.f)));
+    intersectionPoint = getPointOnRay(r, t);
+    normal = glm::normalize(
+        multiplyMV(sphere.transform.invTranspose, glm::vec4(p, 0.f)));
 
-    return glm::length(r.origin - intersectionPoint);
+    outside = dot(ro, ro) >= 1.f;
+
+    return t;
 }
 
 __host__ __device__ float planeIntersectionTest(Geom plane, Ray r,
@@ -104,35 +101,28 @@ __host__ __device__ float planeIntersectionTest(Geom plane, Ray r,
                                                 glm::vec3 &normal,
                                                 bool &outside) {
 
-    glm::vec3 ro =
-        multiplyMV(plane.transform.inverse, glm::vec4(r.origin, 1.0f));
-    glm::vec3 rd = glm::normalize(
-        multiplyMV(plane.transform.inverse, glm::vec4(r.direction, 0.0f)));
+    glm::vec3 ro = multiplyMV(plane.transform.inverse, glm::vec4(r.org, 1.0f));
+    glm::vec3 rd = multiplyMV(plane.transform.inverse, glm::vec4(r.dir, 0.0f));
 
-    glm::vec3 n = glm::vec3(0, 1, 0);
-    float denom = glm::dot(n, rd);
-
-    if (glm::abs(denom) <= 0.0001) {
+    if (glm::abs(rd.y) <= 0.0001) {
         return -1;
     }
 
-    float t = glm::dot(-ro, n) / denom;
+    float t = -ro.y / rd.y;
     if (t <= 0.0001) {
         return -1;
     }
 
-    glm::vec3 objspaceIntersection = getPointOnRay(Ray{ro, rd}, t);
+    glm::vec3 pW = ro + rd * t;
 
-    if (glm::abs(objspaceIntersection.x) > 0.5 ||
-        glm::abs(objspaceIntersection.z) > 0.5) {
+    if (glm::abs(pW.x) > 0.5 || glm::abs(pW.z) > 0.5) {
         return -1;
     }
 
-    outside = denom < 0 ? true : false;
+    outside = rd.y < 0;
 
-    intersectionPoint = multiplyMV(plane.transform.matrix,
-                                   glm::vec4(objspaceIntersection, 1.f));
+    intersectionPoint = getPointOnRay(r, t);
     normal = glm::normalize(
-        multiplyMV(plane.transform.invTranspose, glm::vec4(n, 0.f)));
-    return glm::length(r.origin - intersectionPoint);
+        multiplyMV(plane.transform.invTranspose, glm::vec4(0, 1, 0, 0)));
+    return t;
 }

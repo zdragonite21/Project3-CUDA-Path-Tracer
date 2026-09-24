@@ -83,9 +83,6 @@ static PathSegment *dev_paths = NULL;
 static ShadeableIntersection *dev_intersections = NULL;
 static MatId *dev_isect_matIds = NULL;
 
-// TODO: use radiance for accumulating the final color? or use dev_image... fix
-// throughput setting things to vec3(0);
-static glm::vec3 *dev_radiance = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -157,8 +154,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
         glm::vec2 sub_pixel_sample = glm::vec2(x, y) + offset;
 
         Ray &ray = segment.ray;
-        ray.origin = cam.position;
-        ray.direction = glm::normalize(
+        ray.org = cam.position;
+        ray.dir = glm::normalize(
             cam.view -
             cam.right * cam.pixelLength.x *
                 (sub_pixel_sample.x - (float)cam.resolution.x * 0.5f) -
@@ -166,11 +163,11 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
                 (sub_pixel_sample.y - (float)cam.resolution.y * 0.5f));
 
         if (cam.lensRadius > 0.0) {
-            float t = cam.focalDistance / glm::dot(ray.direction, cam.view);
-            glm::vec3 pFocus = ray.origin + ray.direction * t;
+            float t = cam.focalDistance / glm::dot(ray.dir, cam.view);
+            glm::vec3 pFocus = ray.org + ray.dir * t;
             glm::vec2 pLens = cam.lensRadius * sampleUniformDisk(rng);
-            ray.origin += cam.right * pLens.x + cam.up * pLens.y;
-            ray.direction = glm::normalize(pFocus - ray.origin);
+            ray.org += cam.right * pLens.x + cam.up * pLens.y;
+            ray.dir = glm::normalize(pFocus - ray.org);
         }
 
         segment.throughput = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -214,6 +211,11 @@ __global__ void computeIntersections(int depth, int num_paths,
             } else if (geom.type == SPHERE) {
                 t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect,
                                            tmp_normal, outside);
+            } else if (geom.type == PLANE) {
+                t = planeIntersectionTest(geom, pathSegment.ray, tmp_intersect,
+                                          tmp_normal, outside);
+                // only intersect with one side
+                t = outside ? -1.f : t;
             }
             // TODO: add more intersection tests here... triangle? metaball?
             // CSG?

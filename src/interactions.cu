@@ -185,7 +185,7 @@ __device__ void scatterRay(PathSegment &pathSegment, glm::vec3 p,
                            thrust::default_random_engine &rng) {
 
     BSDFSample s =
-        sampleBSDF(p, normal, -pathSegment.ray.direction, m, rng);
+        sampleBSDF(p, normal, -pathSegment.ray.dir, m, rng);
 
     float lambert = glm::abs(glm::dot(s.wi, normal));
 

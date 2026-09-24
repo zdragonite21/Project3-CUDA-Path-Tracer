@@ -14,8 +14,8 @@ using MatId = uint8_t;
 enum GeomType { SPHERE, CUBE, PLANE };
 
 struct Ray {
-    glm::vec3 origin;
-    glm::vec3 direction;
+    glm::vec3 org;
+    glm::vec3 dir;
 };
 
 struct Transform {

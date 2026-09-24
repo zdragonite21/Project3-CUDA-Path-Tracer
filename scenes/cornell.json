@@ -8,13 +8,13 @@
     "Materials": {
         "light_blue": {
             "TYPE": "Emitting",
-            "EMISSION": [0.0, 1.0, 1.0],
-            "STRENGTH": 5.0
+            "EMISSION": [0.85, 1.0, 0.85],
+            "STRENGTH": 10.0
         },
         "light_red": {
             "TYPE": "Emitting",
-            "EMISSION": [1.0, 1.0, 0.5],
-            "STRENGTH": 20.0
+            "EMISSION": [1.0, 0.85, 0.85],
+            "STRENGTH": 10.0
         },
         "diffuse_white": {
             "TYPE": "Diffuse",
@@ -54,7 +54,7 @@
     },
     "Objects": [
         {
-            "TYPE": "sphere",
+            "TYPE": "plane",
             "MATERIAL": "light_blue",
             "TRANS": [-3.0, 9.5, 0.0],
             "ROTAT": [0.0, 0.0, 0.0],
@@ -107,14 +107,14 @@
             "MATERIAL": "gold",
             "TRANS": [-1.0, 4.0, -1.0],
             "ROTAT": [0.0, 0.0, 0.0],
-            "SCALE": [3.0, 3.0, 3.0]
+            "SCALE": [1.5, 1.5, 1.5]
         },
         {
             "TYPE": "sphere",
             "MATERIAL": "glass",
             "TRANS": [1.0, 3.0, 1.0],
             "ROTAT": [0.0, 0.0, 0.0],
-            "SCALE": [3.0, 3.0, 3.0]
+            "SCALE": [1.5, 1.5, 1.5]
         }
     ]
 }
