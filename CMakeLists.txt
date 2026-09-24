@@ -60,7 +60,7 @@ set(headers
     src/utilities.h
     src/thrust_utils.h
     src/sampling.cuh
-    src/cu_utils.cuh
+    src/bxdf_utils.cuh
 )
 
 set(sources

@@ -36,7 +36,7 @@
         },
         "glass": {
             "TYPE": "Dielectric",
-            "ROUGHNESS": 0.05,
+            "ROUGHNESS": 0.0,
             "IOR": 1.5
         }
     },
@@ -111,7 +111,7 @@
         },
         {
             "TYPE": "sphere",
-            "MATERIAL": "diffuse_white",
+            "MATERIAL": "glass",
             "TRANS": [1.0, 3.0, 1.0],
             "ROTAT": [0.0, 0.0, 0.0],
             "SCALE": [3.0, 3.0, 3.0]

@@ -1,4 +1,4 @@
-#include "cu_utils.cuh"
+#include "bxdf_utils.cuh"
 #include "interactions.h"
 #include "sampling.cuh"
 #include "utilities.h"
@@ -48,6 +48,10 @@ __device__ float fresnelDielectricEval(float cosThetaI, float etaI,
 
     float sinThetaI = glm::sqrt(glm::max(0.f, 1 - cosThetaI * cosThetaI));
     float sinThetaT = etaI / etaT * sinThetaI;
+    if (sinThetaT >= 1.f) {
+        // total internal reflection
+        return 1.f;
+    }
     float costhetaT = glm::sqrt(glm::max(0.f, 1.f - sinThetaT * sinThetaT));
     float cosThetaT = glm::sqrt(glm::max(0.f, 1.f - sinThetaT * sinThetaT));
 
@@ -70,22 +74,51 @@ __device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo,
     return sample;
 }
 
-__device__ BSDFSample sampleSpecularDielectric(glm::vec3 p, glm::vec3 wo,
-                                               const Material &m) {
+// assumes the medium is air and not spectral
+__device__ BSDFSample
+sampleSpecularDielectric(glm::vec3 p, glm::vec3 wo, const Material &m,
+                         thrust::default_random_engine &rng) {
     BSDFSample sample;
-    sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
-    sample.pdf = 1.f;
-    // etaI = 1.f because we assume air here
-    float fr = fresnelDielectricEval(bx::CosTheta(sample.wi), 1.0f, m.ior);
-    sample.f = glm::vec3(fr) / glm::abs(bx::CosTheta(sample.wi));
-    sample.type = BxDFFlag::Reflection | BxDFFlag::Specular;
+    thrust::uniform_real_distribution<float> u01(0, 1);
+
+    if (u01(rng) < 0.5) {
+        // sample perfect specular reflection
+        sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
+        sample.pdf = 0.5f;
+        // etaI = 1.f because we assume air here
+        float fr = fresnelDielectricEval(bx::CosTheta(sample.wi), 1.0f, m.ior);
+        sample.f = glm::vec3(fr) / glm::abs(bx::CosTheta(sample.wi));
+        sample.type = BxDFFlag::Reflection;
+    } else {
+        // sample perfect specular transmission
+        bool entering = bx::CosTheta(wo) > 0;
+        float etaI = entering ? 1.0 : m.ior;
+        float etaT = entering ? m.ior : 1.0;
+        if (!bx::Refract(wo, bx::Faceforward(glm::vec3(0, 0, 1), wo),
+                         etaI / etaT, sample.wi)) {
+            // total internal reflection
+            sample.type = BxDFFlag::Unset;
+            sample.f = glm::vec3(0);
+            return sample;
+        }
+        sample.pdf = 0.5f;
+        // etaI = 1.f because we assume air here
+        float fr =
+            1.f - fresnelDielectricEval(bx::CosTheta(sample.wi), 1.0f, m.ior);
+        sample.f = glm::vec3(fr) / glm::abs(bx::CosTheta(sample.wi));
+        sample.type = BxDFFlag::Transmission;
+    }
+
+    sample.type |= BxDFFlag::Specular;
 
     return sample;
 }
 
+// assumes the medium is air and rgb approx, not spectral
 __device__ BSDFSample sampleSpecularConductor(glm::vec3 p, glm::vec3 wo,
                                               const Material &m) {
     BSDFSample sample;
+
     sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
     sample.pdf = 1.f;
     // etaI for air is 1
@@ -101,7 +134,9 @@ __device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo,
                                        const Material &m,
                                        thrust::default_random_engine &rng) {
     BSDFSample sample{};
-    sample.type = BxDFFlag::Reflection;
+    if (m.roughness == 0.0) {
+        sample = sampleSpecularDielectric(p, wo, m, rng);
+    }
 
     return sample;
 }
@@ -152,7 +187,7 @@ __device__ void scatterRay(PathSegment &pathSegment, glm::vec3 intersect,
 
     float lambert = glm::abs(glm::dot(s.wi, normal));
 
-    if (s.pdf == 0.0) {
+    if (s.pdf == 0.0 || s.type == BxDFFlag::Unset) {
         pathSegment.throughput = glm::vec3(0.0);
         pathSegment.remainingBounces = 0;
     } else {

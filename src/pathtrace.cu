@@ -252,9 +252,13 @@ __global__ void computeIntersections(int depth, int num_paths,
 __global__ void shadeMaterial(int iter, int num_paths, int depth,
                               ShadeableIntersection *shadeableIntersections,
                               MatId *isect_matIds, PathSegment *pathSegments,
-                              Material *materials) {
+                              Material *materials, glm::vec3 *image) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
     if (idx < num_paths && pathSegments[idx].remainingBounces > 0) {
+        glm::vec3 irradiance = glm::vec3(0);
+        
+        PathSegment path = pathSegments[idx];
         ShadeableIntersection intersection = shadeableIntersections[idx];
         MatId matId = isect_matIds[idx];
 
@@ -269,9 +273,8 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
             // If the material indicates that the object was a light, "light"
             // the ray
             if (material.type == MatType::EMISSIVE) {
-                pathSegments[idx].throughput *= material.emission;
-                pathSegments[idx].remainingBounces = 0;
-                return;
+                irradiance += path.throughput * material.emission;
+                path.remainingBounces = 0;
             }
             // Otherwise, do some pseudo-lighting computation. This is actually
             // more like what you would expect from shading in a rasterizer like
@@ -279,10 +282,9 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
             // TODO: replace this! you should be able to start with basically a
             // one-liner
             else {
-                glm::vec3 intersect =
-                    getPointOnRay(pathSegments[idx].ray, intersection.t);
-                scatterRay(pathSegments[idx], intersect,
-                           intersection.surfaceNormal, material, rng);
+                glm::vec3 intersect = getPointOnRay(path.ray, intersection.t);
+                scatterRay(path, intersect, intersection.surfaceNormal,
+                           material, rng);
             }
             // If there was no intersection, color the ray black.
             // Lots of renderers use 4 channel color, RGBA, where A = alpha,
@@ -290,35 +292,27 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
             // opacity". This can be useful for post-processing and image
             // compositing.
         } else {
-            pathSegments[idx].throughput = glm::vec3(0.0f);
+            path.throughput = glm::vec3(0.0f);
+            path.remainingBounces = 0;
         }
 
 #if RUSSIAN_ROULETTE
-        if (depth > 3) {
+        if (depth > 3 && path.remainingBounces > 0) {
             thrust::uniform_real_distribution<float> u01(0, 1);
 
-            glm::vec3 &throughput = pathSegments[idx].throughput;
-            float surviveP = max(throughput.x, max(throughput.y, throughput.z));
+            float surviveP = max(path.throughput.x, max(path.throughput.y, path.throughput.z));
             surviveP = glm::clamp(surviveP, 0.05f, 0.95f);
             if (u01(rng) > surviveP) {
-                pathSegments[idx].throughput = glm::vec3(0);
-                pathSegments[idx].remainingBounces = 0;
-                return;
+                path.throughput = glm::vec3(0);
+                path.remainingBounces = 0;
+            } else {
+                path.throughput /= surviveP;
             }
-            throughput /= surviveP;
         }
 #endif
-    }
-}
-
-// Add the current iteration's output to the overall image
-__global__ void finalGather(int nPaths, glm::vec3 *image,
-                            PathSegment *iterationPaths) {
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-
-    if (index < nPaths) {
-        PathSegment iterationPath = iterationPaths[index];
-        image[iterationPath.pixelIndex] += iterationPath.throughput;
+        pathSegments[idx] = path;
+        // final gather
+        image[path.pixelIndex] += irradiance;
     }
 }
 
@@ -414,7 +408,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
             iter, num_paths, depth, dev_intersections, dev_isect_matIds,
-            dev_paths, dev_materials);
+            dev_paths, dev_materials, dev_image);
         checkCUDAError("shader material");
 
 #if COMPACT_MISSED
@@ -434,11 +428,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             guiData->TracedDepth = depth;
         }
     }
-
-    // Assemble this iteration and apply it to the image
-    dim3 numBlocksPixels = utilityCore::divup(pixelcount, blockSize1d);
-    finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image,
-                                                  dev_paths);
 
     ///////////////////////////////////////////////////////////////////////////
 
