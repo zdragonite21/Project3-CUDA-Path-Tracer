@@ -223,7 +223,7 @@ __device__ void scatterRay(PathSegment& pathSegment, glm::vec3 p, glm::vec3 norm
 __device__ glm::vec3 directRay(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
                           RngEng& rng, const Light* lights, int lights_size, const Geom* geoms,
                           int geoms_size) {
-    LightSample sample = sampleLi(p, lights, lights_size, geoms, geoms_size, rng);
+    LightSample sample = sampleLi(p, nor, lights, lights_size, geoms, geoms_size, rng);
 
     if (sample.lightIdx == -1 || sample.pdf == 0.f) {
         return glm::vec3(0.f);

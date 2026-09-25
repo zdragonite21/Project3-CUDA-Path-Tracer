@@ -285,13 +285,18 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth, int lights_siz
 #if LI_NEE
                 glm::vec3 p = getPointOnRay(path.ray, intersection.t);
                 glm::vec3 nor = intersection.surfaceNormal;
-                glm::vec3 direct = directRay(path, p, nor, material, rng, lights, lights_size, geoms, geoms_size);
-                radiance += path.throughput * direct;
+                if (material.type == MatType::DIFFUSE) {
+                    // if not delta (so change this when I add microfacet)
+                    glm::vec3 direct = directRay(path, p, nor, material, rng, lights, lights_size,
+                                                 geoms, geoms_size);
+                    radiance += path.throughput * direct;
+                }
                 scatterRay(path, p, nor, material, rng);
 
 #elif LI_DIRECT
                 glm::vec3 p = getPointOnRay(path.ray, intersection.t);
-                glm::vec3 direct = directRay(path, p, intersection.surfaceNormal, material, rng, lights, lights_size, geoms, geoms_size);
+                glm::vec3 direct = directRay(path, p, intersection.surfaceNormal, material, rng,
+                                             lights, lights_size, geoms, geoms_size);
                 radiance += direct;
                 path.remaningBounces = 0;
 #else

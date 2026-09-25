@@ -16,6 +16,9 @@ __device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane, Rn
 
     glm::vec3 v = lightP - p;
     sample.dist = length(v);
+    if (sample.dist == 0.f) {
+        return sample;
+    }
     sample.wi = v / sample.dist;
 
     float cosT = glm::dot(-sample.wi, lightN);
@@ -24,7 +27,6 @@ __device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane, Rn
     }
 
     sample.pdf = sample.dist * sample.dist / (cosT * surfaceArea);
-    sample.lightIdx = 0;
     return sample;
 }
 
@@ -40,7 +42,7 @@ __device__ LightSample directSampleAreaLight(glm::vec3 p, const Geom& geom, RngE
     return sample;
 }
 
-__device__ LightSample sampleLi(glm::vec3 p, const Light* lights, int lights_size,
+__device__ LightSample sampleLi(glm::vec3 p, glm::vec3 nor, const Light* lights, int lights_size,
                                 const Geom* geoms, int geoms_size, RngEng& rng) {
     LightSample sample{};
     if (lights_size == 0) {
@@ -56,10 +58,10 @@ __device__ LightSample sampleLi(glm::vec3 p, const Light* lights, int lights_siz
         sample = directSampleAreaLight(p, geoms[light.geomId], rng);
         break;
     case LightType::ENVIRONMENT:
-        sample.lightIdx = -1;
         break;
     }
-    if (sample.lightIdx == -1) {
+    if (sample.pdf <= 0.f || glm::dot(sample.wi, nor) <= 0.f) {
+        sample.lightIdx = -1;
         return sample;
     }
 
