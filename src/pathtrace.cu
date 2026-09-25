@@ -51,6 +51,10 @@ __host__ __device__ RngEng makeSeededRandomEngine(int iter, int index, int depth
 
 // Kernel that writes the image to the OpenGL PBO directly.
 __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution, int iter, glm::vec3* image) {
+    if (iter == 0) {
+        return;
+    }
+
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
@@ -448,9 +452,12 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     // Send results to OpenGL buffer for rendering
     sendImageToPBO<<<blocksPerGrid2d, blockSize2d>>>(pbo, cam.resolution, iter, dev_image);
 
-    // Retrieve image from GPU
+    checkCUDAError("pathtrace");
+}
+
+void copyImageToHost() {
+    const Camera& cam = hst_scene->state.camera;
+    const int pixelcount = cam.resolution.x * cam.resolution.y;
     cudaMemcpy(hst_scene->state.image.data(), dev_image, pixelcount * sizeof(glm::vec3),
                cudaMemcpyDeviceToHost);
-
-    checkCUDAError("pathtrace");
 }
