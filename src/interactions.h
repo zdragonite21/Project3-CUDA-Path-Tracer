@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-#include <thrust/random.h>
+#include "thrust_utils.h"
 
 /**
  * Scatter a ray with some probabilities according to the material properties.
@@ -36,4 +36,4 @@ __device__ void scatterRay(
     glm::vec3 intersect,
     glm::vec3 normal,
     const Material& m,
-    thrust::default_random_engine& rng);
+    RngEng& rng);

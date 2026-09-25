@@ -2,7 +2,6 @@
 
 #include <cstdio>
 #include <cuda.h>
-#include <thrust/random.h>
 
 #include "interactions.h"
 #include "intersections.h"
@@ -41,10 +40,10 @@ void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #endif // ERRORCHECK
 }
 
-__host__ __device__ thrust::default_random_engine makeSeededRandomEngine(int iter, int index,
+__host__ __device__ RngEng makeSeededRandomEngine(int iter, int index,
                                                                          int depth) {
     int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
-    return thrust::default_random_engine(h);
+    return RngEng(h);
 }
 
 // Kernel that writes the image to the OpenGL PBO directly.
@@ -141,8 +140,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
         int index = x + (y * cam.resolution.x);
         PathSegment& segment = pathSegments[index];
 
-        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
-        thrust::uniform_real_distribution<float> u01(0, 1);
+        RngEng rng = makeSeededRandomEngine(iter, index, 0);
+        UnifDist<float> u01(0, 1);
 
         glm::vec2 offset = glm::vec2(u01(rng), u01(rng));
         glm::vec2 sub_pixel_sample = glm::vec2(x, y) + offset;
@@ -253,7 +252,7 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
         ShadeableIntersection intersection = shadeableIntersections[idx];
         MatId matId = isect_matIds[idx];
 
-        thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, depth);
+        RngEng rng = makeSeededRandomEngine(iter, idx, depth);
         if (intersection.t > 0.0f && matId != UINT8_MAX) // if the intersection exists...
         {
             Material material = materials[matId];
@@ -286,7 +285,7 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
 
 #if RUSSIAN_ROULETTE
         if (depth > 3 && path.remainingBounces > 0) {
-            thrust::uniform_real_distribution<float> u01(0, 1);
+            UnifDist<float> u01(0, 1);
 
             float surviveP = max(path.throughput.x, max(path.throughput.y, path.throughput.z));
             surviveP = glm::clamp(surviveP, 0.05f, 0.95f);

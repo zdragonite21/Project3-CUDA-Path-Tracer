@@ -3,11 +3,12 @@
 #include "light_sampling.cuh"
 #include "sampling.cuh"
 #include "sceneStructs.h"
+#include "thrust_utils.h"
 
 __device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane,
-                                              thrust::default_random_engine& rng) {
+                                              RngEng& rng) {
     LightSample sample{};
-    thrust::uniform_real_distribution<float> u01(0, 1);
+    UnifDist<float> u01(0, 1);
 
     float surfaceArea = plane.transform.scale.x * plane.transform.scale.z;
     glm::vec2 xi(u01(rng), u01(rng));
@@ -30,7 +31,7 @@ __device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane,
 }
 
 __device__ LightSample directSampleAreaLight(glm::vec3 p, const Geom& geom,
-                                             thrust::default_random_engine& rng) {
+                                             RngEng& rng) {
     LightSample sample{};
     switch (geom.type) {
     case GeomType::PLANE:
@@ -45,13 +46,13 @@ __device__ LightSample directSampleAreaLight(glm::vec3 p, const Geom& geom,
 
 __device__ LightSample sampleLi(glm::vec3 p, const Light* lights, int lights_size,
                                 const Geom* geoms, int geoms_size,
-                                thrust::default_random_engine& rng) {
+                                RngEng& rng) {
     LightSample sample{};
     if (lights_size == 0) {
         sample.lightIdx = -1;
         return sample;
     }
-    thrust::uniform_real_distribution<float> u01(0, 1);
+    UnifDist<float> u01(0, 1);
 
     int lightPr = static_cast<int>(u01(rng) * lights_size);
     const Light& light = lights[lightPr];

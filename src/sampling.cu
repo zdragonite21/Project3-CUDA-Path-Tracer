@@ -1,8 +1,9 @@
 #include "sampling.cuh"
+#include "thrust_utils.h"
 #include "utilities.h"
 __device__ glm::vec3
-calculateRandomDirectionInCosineHemisphere(thrust::default_random_engine &rng) {
-    thrust::uniform_real_distribution<float> u01(0, 1);
+calculateRandomDirectionInCosineHemisphere(RngEng &rng) {
+    UnifDist<float> u01(0, 1);
 
     glm::vec2 xi(u01(rng), u01(rng));
     glm::vec3 dir = squareToHemisphereCosine(xi);
@@ -10,8 +11,8 @@ calculateRandomDirectionInCosineHemisphere(thrust::default_random_engine &rng) {
     return dir;
 }
 
-__device__ glm::vec2 sampleUniformDisk(thrust::default_random_engine &rng) {
-    thrust::uniform_real_distribution<float> u01(0, 1);
+__device__ glm::vec2 sampleUniformDisk(RngEng &rng) {
+    UnifDist<float> u01(0, 1);
 
     glm::vec2 xi(u01(rng), u01(rng));
 

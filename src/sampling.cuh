@@ -1,9 +1,9 @@
 #include <glm/glm.hpp>
-#include <thrust/random.h>
+#include "thrust_utils.h"
 
 __device__ glm::vec3
-calculateRandomDirectionInCosineHemisphere(thrust::default_random_engine &rng);
-__device__ glm::vec2 sampleUniformDisk(thrust::default_random_engine &rng);
+calculateRandomDirectionInCosineHemisphere(RngEng &rng);
+__device__ glm::vec2 sampleUniformDisk(RngEng &rng);
 __device__ glm::vec3 squareToDiskConcentric(glm::vec2 xi);
 __device__ glm::vec3 squareToHemisphereCosine(glm::vec2 xi);
 __device__ float squareToHemisphereCosinePDF(glm::vec3 s);

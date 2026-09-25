@@ -59,7 +59,7 @@ __device__ float fresnelDielectricEval(float cosThetaI, float etaI, float etaT) 
 }
 
 __device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                    thrust::default_random_engine& rng) {
+                                    RngEng& rng) {
     BSDFSample sample;
     sample.wi = calculateRandomDirectionInCosineHemisphere(rng);
     sample.pdf = bx::CosTheta(sample.wi) * INV_PI;
@@ -71,9 +71,9 @@ __device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m
 
 // assumes the medium is air and not spectral
 __device__ BSDFSample sampleSmoothDielectric(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                             thrust::default_random_engine& rng) {
+                                             RngEng& rng) {
     BSDFSample sample;
-    thrust::uniform_real_distribution<float> u01(0, 1);
+    UnifDist<float> u01(0, 1);
 
     // etaI = 1.f because we assume air here
     float r = fresnelDielectricEval(bx::CosTheta(wo), 1.0f, m.ior);
@@ -124,7 +124,7 @@ __device__ BSDFSample sampleSmoothConductor(glm::vec3 p, glm::vec3 wo, const Mat
 }
 
 __device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                       thrust::default_random_engine& rng) {
+                                       RngEng& rng) {
     BSDFSample sample{};
     if (m.roughness == 0.0) {
         sample = sampleSmoothDielectric(p, wo, m, rng);
@@ -134,7 +134,7 @@ __device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material
 }
 
 __device__ BSDFSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                      thrust::default_random_engine& rng) {
+                                      RngEng& rng) {
     BSDFSample sample{};
     if (m.roughness == 0.0) {
         sample = sampleSmoothConductor(p, wo, m);
@@ -144,7 +144,7 @@ __device__ BSDFSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material&
 }
 
 __device__ BSDFSample sampleBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, const Material& m,
-                                 thrust::default_random_engine& rng) {
+                                 RngEng& rng) {
     glm::vec3 wo = bx::worldToLocal(nor) * woW;
 
     BSDFSample sample{};
@@ -175,7 +175,7 @@ __device__ float pdfBSDF() {
 }
 
 __device__ void scatterRay(PathSegment& pathSegment, glm::vec3 p, glm::vec3 normal,
-                           const Material& m, thrust::default_random_engine& rng) {
+                           const Material& m, RngEng& rng) {
 
     BSDFSample s = sampleBSDF(p, normal, -pathSegment.ray.dir, m, rng);
 
