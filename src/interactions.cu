@@ -58,8 +58,7 @@ __device__ float fresnelDielectricEval(float cosThetaI, float etaI, float etaT) 
     return (Rparl * Rparl + Rperp * Rperp) / 2.f;
 }
 
-__device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                    RngEng& rng) {
+__device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
     BSDFSample sample;
     sample.wi = calculateRandomDirectionInCosineHemisphere(rng);
     sample.pdf = bx::CosTheta(sample.wi) * INV_PI;
@@ -123,8 +122,7 @@ __device__ BSDFSample sampleSmoothConductor(glm::vec3 p, glm::vec3 wo, const Mat
     return sample;
 }
 
-__device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                       RngEng& rng) {
+__device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
     BSDFSample sample{};
     if (m.roughness == 0.0) {
         sample = sampleSmoothDielectric(p, wo, m, rng);
@@ -133,8 +131,7 @@ __device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material
     return sample;
 }
 
-__device__ BSDFSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                      RngEng& rng) {
+__device__ BSDFSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
     BSDFSample sample{};
     if (m.roughness == 0.0) {
         sample = sampleSmoothConductor(p, wo, m);
