@@ -19,8 +19,8 @@
 
 #define RUSSIAN_ROULETTE 1
 
-#define LI_DIRECT 0
 #define LI_NEE 1
+#define LI_DIRECT 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -298,7 +298,7 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth, int lights_siz
                 glm::vec3 direct = directRay(path, p, intersection.surfaceNormal, material, rng,
                                              lights, lights_size, geoms, geoms_size);
                 radiance += direct;
-                path.remaningBounces = 0;
+                path.remainingBounces = 0;
 #else
                 glm::vec3 intersect = getPointOnRay(path.ray, intersection.t);
                 scatterRay(path, intersect, intersection.surfaceNormal, material, rng);
@@ -411,6 +411,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 #if SORT_PATHS
         sort_paths(num_paths, dev_intersections, dev_isect_matIds, dev_paths);
+
+        num_paths = filter_missed(num_paths, dev_isect_matIds);
+#elif COMPACT_MISSED
+        num_paths = compact_missed(num_paths, dev_intersections, dev_isect_matIds, dev_paths);
 #endif
         // TODO:
         // --- Shading Stage ---
@@ -426,12 +430,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             dev_intersections, dev_isect_matIds, dev_paths, dev_materials, dev_lights, dev_geoms,
             dev_image);
         checkCUDAError("shader material");
-
-#if COMPACT_MISSED
-        // happens after shade material because we need
-        // to set the missed rays to have a color of 0
-        num_paths = compact_missed(num_paths, dev_isect_matIds);
-#endif
 
 #if COMPACT_TERMINATED
         num_paths = compact_terminated(num_paths, dev_paths);
