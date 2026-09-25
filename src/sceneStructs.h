@@ -33,13 +33,18 @@ struct Geom {
     Transform transform;
 };
 
-enum class LightType { AREA, POINT, ENVIRONMENT };
+enum class LightType { AREA, ENVIRONMENT };
 
+
+// for area lights, both light and material get the same emission (for convenience)
+// light -> geom -> material
 struct Light {
     LightType type;
 
     int geomId;
-    glm::vec3 intensity;
+    glm::vec3 emission;
+
+    float env_strength;
 };
 
 enum class MatType : uint8_t { DIFFUSE, CONDUCTOR, DIELECTRIC, EMISSIVE };
@@ -124,4 +129,13 @@ struct BSDFSample {
     float pdf;
     glm::vec3 f;
     BxDFFlag type;
+};
+
+
+struct LightSample {
+    glm::vec3 wi;
+    float dist;
+    glm::vec3 radiance;
+    float pdf;
+    int lightIdx;
 };

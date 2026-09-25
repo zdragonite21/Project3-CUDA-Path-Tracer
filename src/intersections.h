@@ -39,9 +39,8 @@ __host__ __device__ inline glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float boxIntersectionTest(Geom box, Ray r,
-                                              glm::vec3 &intersectionPoint,
-                                              glm::vec3 &normal, bool &outside);
+__host__ __device__ float boxIntersectionTest(const Geom& box, Ray r, glm::vec3* intersectionPoint,
+                                              glm::vec3* normal, bool* outside);
 
 // CHECKITOUT
 /**
@@ -53,12 +52,10 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
-                                                 glm::vec3 &intersectionPoint,
-                                                 glm::vec3 &normal,
-                                                 bool &outside);
+__host__ __device__ float sphereIntersectionTest(const Geom& sphere, Ray r, glm::vec3* intersectionPoint,
+                                                 glm::vec3* normal, bool* outside);
 
-__host__ __device__ float planeIntersectionTest(Geom plane, Ray r,
-                                                glm::vec3 &intersectionPoint,
-                                                glm::vec3 &normal,
-                                                bool &outside);
+__host__ __device__ float planeIntersectionTest(const Geom& plane, Ray r, glm::vec3* intersectionPoint,
+                                                glm::vec3* normal, bool* outside);
+
+__device__ bool visibleToLight(Ray r, float lightDist, const Geom* geoms, int geoms_size);

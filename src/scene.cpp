@@ -38,9 +38,7 @@ void Scene::loadFromJSON(const std::string &jsonName) {
         if (p["TYPE"] == "Environment") {
             newLight.geomId = -1;
             newLight.type = LightType::ENVIRONMENT;
-            const auto &intensity = p["INTENSITY"];
-            newLight.intensity =
-                glm::vec3(intensity[0], intensity[1], intensity[2]);
+            newLight.env_strength = p["STRENGTH"];
         }
         // TODO: integrate environment lighting
         // lights.push_back(newLight);
@@ -93,6 +91,7 @@ void Scene::loadFromJSON(const std::string &jsonName) {
             Light newLight{};
             newLight.geomId = geoms.size();
             newLight.type = LightType::AREA;
+            newLight.emission = materials[newGeom.materialId].emission;
             lights.push_back(newLight);
         }
         Transform newTrans;

@@ -2,19 +2,19 @@
     "Lights": {
         "env": {
             "TYPE": "Environment",
-            "INTENSITY": [1.0, 1.0, 1.0]
+            "STRENGTH": 1.0
         }
     },
     "Materials": {
         "light_blue": {
             "TYPE": "Emitting",
-            "EMISSION": [0.85, 1.0, 0.85],
+            "EMISSION": [0.6, 1.0, 0.6],
             "STRENGTH": 10.0
         },
         "light_red": {
             "TYPE": "Emitting",
-            "EMISSION": [1.0, 0.85, 0.85],
-            "STRENGTH": 10.0
+            "EMISSION": [1.0, 0.8, 0.6],
+            "STRENGTH": 15.0
         },
         "diffuse_white": {
             "TYPE": "Diffuse",
@@ -44,7 +44,7 @@
         "RES": [800, 800],
         "FOVY": 45.0,
         "ITERATIONS": 5000,
-        "DEPTH": 16,
+        "DEPTH": 4,
         "FILE": "cornell",
         "EYE": [0.0, 5.0, 10.5],
         "LOOKAT": [0.0, 5.0, 0.0],
@@ -61,7 +61,7 @@
             "SCALE": [3.0, 0.3, 3.0]
         },
         {
-            "TYPE": "sphere",
+            "TYPE": "plane",
             "MATERIAL": "light_red",
             "TRANS": [3.0, 9.5, 0.0],
             "ROTAT": [0.0, 0.0, 0.0],
@@ -104,14 +104,14 @@
         },
         {
             "TYPE": "sphere",
-            "MATERIAL": "gold",
+            "MATERIAL": "diffuse_white",
             "TRANS": [-1.0, 4.0, -1.0],
             "ROTAT": [0.0, 0.0, 0.0],
             "SCALE": [1.5, 1.5, 1.5]
         },
         {
             "TYPE": "sphere",
-            "MATERIAL": "glass",
+            "MATERIAL": "diffuse_white",
             "TRANS": [1.0, 3.0, 1.0],
             "ROTAT": [0.0, 0.0, 0.0],
             "SCALE": [1.5, 1.5, 1.5]
