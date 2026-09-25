@@ -301,6 +301,8 @@ void saveImage() {
 }
 
 void mainLoop() {
+    pathtraceInit(scene);
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -325,6 +327,9 @@ void mainLoop() {
 
         glfwSwapBuffers(window);
     }
+
+    pathtraceFree();
+    cudaDeviceReset();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -416,8 +421,7 @@ void runCuda() {
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
     if (iteration == 0) {
-        pathtraceFree();
-        pathtraceInit(scene);
+        pathtraceReset(scene);
     }
 
     if (iteration < renderState->iterations) {
@@ -437,8 +441,6 @@ void runCuda() {
         cudaGraphicsUnmapResources(1, &cuda_pixel_resource);
     } else {
         glfwSetWindowShouldClose(window, GL_TRUE);
-        pathtraceFree();
-        cudaDeviceReset();
         exit(EXIT_SUCCESS);
     }
 }

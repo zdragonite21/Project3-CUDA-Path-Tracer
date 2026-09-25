@@ -38,12 +38,12 @@ enum class LightType { AREA, ENVIRONMENT };
 // for area lights, both light and material get the same emission (for convenience)
 // light -> geom -> material
 struct Light {
-    LightType type;
-
-    int geomId;
     glm::vec3 emission;
-
+    int geomId;
+    
     float env_strength;
+
+    LightType type;
 };
 
 enum class MatType : uint8_t { DIFFUSE, CONDUCTOR, DIELECTRIC, EMISSIVE };

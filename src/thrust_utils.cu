@@ -2,10 +2,11 @@
 #include "thrust_utils.h"
 #include <thrust/binary_search.h>
 #include <thrust/partition.h>
+#include <thrust/execution_policy.h>
 
-struct IsPathAlive {
+struct IsPathTerminated {
     __host__ __device__ bool operator()(const PathSegment& ps) const {
-        return ps.remainingBounces > 0;
+        return ps.remainingBounces <= 0;
     }
 };
 
@@ -17,25 +18,20 @@ struct IsIsectHit {
     }
 };
 
-void sort_paths(int num_paths, ShadeableIntersection* isects, MatId* matIds, PathSegment* paths) {
+void sort_paths(int num_paths, ShadeableIntersection* isects, MatId* matIds, PathSegment* paths, cudaStream_t stream) {
+    auto policy = thrust::cuda::par_nosync.on(stream);
     auto zip_begin = thrust::make_zip_iterator(thrust::make_tuple(isects, paths));
-    thrust::sort_by_key(thrust::device, matIds, matIds + num_paths, zip_begin);
+    thrust::sort_by_key(policy, matIds, matIds + num_paths, zip_begin);
 }
 
-int filter_missed(int num_paths, MatId* matIds) {
-    auto new_end = thrust::lower_bound(thrust::device, matIds, matIds + num_paths, UINT8_MAX);
+int filter_missed(int num_paths, MatId* matIds, cudaStream_t stream) {
+    auto policy = thrust::cuda::par_nosync.on(stream);
+    auto new_end = thrust::lower_bound(policy, matIds, matIds + num_paths, UINT8_MAX);
     return new_end - matIds;
 }
 
-int compact_terminated(int num_paths, PathSegment* paths) {
-    auto new_end = thrust::partition(thrust::device, paths, paths + num_paths, IsPathAlive{});
+int compact_terminated(int num_paths, PathSegment* paths, cudaStream_t stream) {
+    auto policy = thrust::cuda::par_nosync.on(stream);
+    auto new_end = thrust::remove_if(policy, paths, paths + num_paths, IsPathTerminated{});
     return new_end - paths;
-}
-
-int compact_missed(int num_paths, ShadeableIntersection* isects, MatId* matIds,
-                       PathSegment* paths) {
-    auto zip_begin = thrust::make_zip_iterator(thrust::make_tuple(isects, paths, matIds));
-    auto new_end =
-        thrust::partition(thrust::device, zip_begin, zip_begin + num_paths, IsIsectHit{});
-    return new_end - zip_begin;
 }
