@@ -35,7 +35,6 @@ struct Geom {
 
 enum class LightType { AREA, ENVIRONMENT };
 
-
 // for area lights, both light and material get the same emission (for convenience)
 // light -> geom -> material
 struct Light {
@@ -109,15 +108,11 @@ enum class BxDFFlag : uint8_t {
 
 // overload operators because BxFFlag is strongly typed
 __host__ __device__ constexpr BxDFFlag operator|(BxDFFlag a, BxDFFlag b) {
-    return static_cast<BxDFFlag>(
-        static_cast<uint8_t>(a) | static_cast<uint8_t>(b)
-    );
+    return static_cast<BxDFFlag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
 
 __host__ __device__ constexpr BxDFFlag operator&(BxDFFlag a, BxDFFlag b) {
-    return static_cast<BxDFFlag>(
-        static_cast<uint8_t>(a) & static_cast<uint8_t>(b)
-    );
+    return static_cast<BxDFFlag>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
 __host__ __device__ constexpr BxDFFlag& operator|=(BxDFFlag& a, BxDFFlag b) {
@@ -131,11 +126,12 @@ struct BSDFSample {
     BxDFFlag type;
 };
 
-
 struct LightSample {
     glm::vec3 wi;
     float dist;
     glm::vec3 radiance;
     float pdf;
     int lightIdx;
+
+    __device__ LightSample() : wi{}, dist{}, radiance{}, pdf{}, lightIdx(-1) {}
 };

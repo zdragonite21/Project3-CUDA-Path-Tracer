@@ -1,5 +1,6 @@
 #include "pathtrace.h"
 
+#include <cstddef>
 #include <cstdio>
 #include <cuda.h>
 
@@ -17,6 +18,8 @@
 #define COMPACT_TERMINATED 1
 
 #define RUSSIAN_ROULETTE 1
+
+#define LI_DIRECT 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -40,8 +43,7 @@ void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #endif // ERRORCHECK
 }
 
-__host__ __device__ RngEng makeSeededRandomEngine(int iter, int index,
-                                                                         int depth) {
+__host__ __device__ RngEng makeSeededRandomEngine(int iter, int index, int depth) {
     int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
     return RngEng(h);
 }
@@ -75,6 +77,7 @@ static Geom* dev_geoms = NULL;
 static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
+static Light* dev_lights = NULL;
 static MatId* dev_isect_matIds = NULL;
 
 // TODO: static variables for device memory, any extra info you need, etc
@@ -99,6 +102,10 @@ void pathtraceInit(Scene* scene) {
     cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom),
                cudaMemcpyHostToDevice);
 
+    cudaMalloc(&dev_lights, scene->lights.size() * sizeof(Light));
+    cudaMemcpy(dev_lights, scene->lights.data(), scene->lights.size() * sizeof(Light),
+               cudaMemcpyHostToDevice);
+
     cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
     cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material),
                cudaMemcpyHostToDevice);
@@ -119,6 +126,7 @@ void pathtraceFree() {
     cudaFree(dev_materials);
     cudaFree(dev_intersections);
     cudaFree(dev_isect_matIds);
+    cudaFree(dev_lights);
 
     checkCUDAError("pathtraceFree");
 }
@@ -204,7 +212,9 @@ __global__ void computeIntersections(int depth, int num_paths, PathSegment* path
                 t = planeIntersectionTest(geom, pathSegment.ray, &tmp_intersect, &tmp_normal,
                                           &outside);
                 // only intersect with one side
-                t = outside ? -1.f : t;
+                if (outside) {
+                    continue;
+                }
             }
             // TODO: add more intersection tests here... triangle? metaball?
             // CSG?
@@ -240,9 +250,10 @@ __global__ void computeIntersections(int depth, int num_paths, PathSegment* path
 // Note that this shader does NOT do a BSDF evaluation!
 // Your shaders should handle that - this can allow techniques such as
 // bump mapping.
-__global__ void shadeMaterial(int iter, int num_paths, int depth,
+__global__ void shadeMaterial(int iter, int num_paths, int depth, int lights_size, int geoms_size,
                               ShadeableIntersection* shadeableIntersections, MatId* isect_matIds,
-                              PathSegment* pathSegments, Material* materials, glm::vec3* image) {
+                              PathSegment* pathSegments, Material* materials, Light* lights,
+                              Geom* geoms, glm::vec3* image) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < num_paths && pathSegments[idx].remainingBounces > 0) {
@@ -270,8 +281,14 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth,
             // TODO: replace this! you should be able to start with basically a
             // one-liner
             else {
+#if LI_DIRECT
+                glm::vec3 p = getPointOnRay(path.ray, intersection.t);
+                bounceRay(path, p, intersection.surfaceNormal, material, rng, lights, lights_size, geoms, geoms_size);
+                radiance += path.throughput;
+#else
                 glm::vec3 intersect = getPointOnRay(path.ray, intersection.t);
                 scatterRay(path, intersect, intersection.surfaceNormal, material, rng);
+#endif
             }
             // If there was no intersection, color the ray black.
             // Lots of renderers use 4 channel color, RGBA, where A = alpha,
@@ -391,7 +408,8 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         // path segments that have been reshuffled to be contiguous in memory.
 
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
-            iter, num_paths, depth, dev_intersections, dev_isect_matIds, dev_paths, dev_materials,
+            iter, num_paths, depth, hst_scene->lights.size(), hst_scene->geoms.size(),
+            dev_intersections, dev_isect_matIds, dev_paths, dev_materials, dev_lights, dev_geoms,
             dev_image);
         checkCUDAError("shader material");
 

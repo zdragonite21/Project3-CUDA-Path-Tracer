@@ -58,4 +58,4 @@ __host__ __device__ float sphereIntersectionTest(const Geom& sphere, Ray r, glm:
 __host__ __device__ float planeIntersectionTest(const Geom& plane, Ray r, glm::vec3* isectPoint,
                                                 glm::vec3* normal, bool* outside);
 
-__device__ bool visibleToLight(Ray r, float lightDist, const Geom* geoms, int geoms_size);
+__device__ bool visibleToLight(Ray r, int lightGeomIdx, float lightDist, const Geom* geoms, int geoms_size);

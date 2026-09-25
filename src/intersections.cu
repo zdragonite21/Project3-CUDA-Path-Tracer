@@ -103,7 +103,7 @@ __host__ __device__ float sphereIntersectionTest(const Geom& sphere, Ray r,
 
 __host__ __device__ float planeIntersectionTest(const Geom& plane, Ray r,
                                                 glm::vec3* intersectionPoint, glm::vec3* normal,
-                                                bool* outside) {
+                                                bool* backFacing) {
 
     glm::vec3 ro = multiplyMV(plane.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiplyMV(plane.transform.inverse, glm::vec4(r.dir, 0.0f));
@@ -123,8 +123,8 @@ __host__ __device__ float planeIntersectionTest(const Geom& plane, Ray r,
         return -1;
     }
 
-    if (outside) {
-        *outside = rd.y < 0;
+    if (backFacing) {
+        *backFacing = rd.y > 0;
     }
     if (intersectionPoint) {
         *intersectionPoint = getPointOnRay(r, t);
@@ -135,11 +135,14 @@ __host__ __device__ float planeIntersectionTest(const Geom& plane, Ray r,
     return t;
 }
 
-__device__ bool visibleToLight(Ray r, float lightDist, const Geom* geoms, int geoms_size) {
+__device__ bool visibleToLight(Ray r, int lightGeomIdx, float lightDist, const Geom* geoms, int geoms_size) {
     float minT = lightDist;
     float t;
 
     for (int i = 0; i < geoms_size; ++i) {
+        if (i == lightGeomIdx) {
+            continue;
+        }
         const Geom& geom = geoms[i];
         switch (geom.type) {
         case GeomType::CUBE:

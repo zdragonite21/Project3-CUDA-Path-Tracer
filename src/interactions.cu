@@ -1,7 +1,9 @@
 #include "bxdf_utils.cuh"
 #include "interactions.h"
 #include "sampling.cuh"
+#include "sceneStructs.h"
 #include "utilities.h"
+#include "light_sampling.cuh"
 
 __device__ glm::vec3 fresnelConductorEval(float cosThetaI, const glm::vec3& etaI,
                                           const glm::vec3& etaT, const glm::vec3& k) {
@@ -58,11 +60,15 @@ __device__ float fresnelDielectricEval(float cosThetaI, float etaI, float etaT) 
     return (Rparl * Rparl + Rperp * Rperp) / 2.f;
 }
 
+__device__ __forceinline__ glm::vec3 evalDiffuse(glm::vec3 color) {
+    return color * INV_PI;
+}
+
 __device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
     BSDFSample sample;
     sample.wi = calculateRandomDirectionInCosineHemisphere(rng);
     sample.pdf = bx::CosTheta(sample.wi) * INV_PI;
-    sample.f = m.color * INV_PI;
+    sample.f = evalDiffuse(m.color);
     sample.type = BxDFFlag::Diffuse;
 
     return sample;
@@ -163,8 +169,34 @@ __device__ BSDFSample sampleBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, cons
     return sample;
 }
 
-__device__ glm::vec3 evalBSDF() {
-    return glm::vec3(0);
+__device__ glm::vec3 evalBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, glm::vec3 wiW,
+                              const Material& m) {
+    glm::vec3 wo = bx::worldToLocal(nor) * woW;
+    glm::vec3 wi = bx::worldToLocal(nor) * wiW;
+
+    // lambertian term will be 0
+    if (wo.z == 0.0) {
+        return glm::vec3(0);
+    }
+
+    switch (m.type) {
+    case MatType::DIFFUSE:
+        return evalDiffuse(m.color);
+    case MatType::DIELECTRIC:
+        if (m.roughness == 0.f) {
+            return glm::vec3(0.f);
+        }
+        // implement microfacet
+        return glm::vec3(0.f);
+    case MatType::CONDUCTOR:
+        if (m.roughness == 0.f) {
+            return glm::vec3(0.f);
+        }
+        // implement microfacet
+        return glm::vec3(0.f);
+    default:
+        return glm::vec3(0.f);
+    }
 }
 
 __device__ float pdfBSDF() {
@@ -186,4 +218,23 @@ __device__ void scatterRay(PathSegment& pathSegment, glm::vec3 p, glm::vec3 norm
         pathSegment.ray = bx::SpawnRay(p, s.wi);
         pathSegment.remainingBounces--;
     }
+}
+
+__device__ void bounceRay(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
+                          RngEng& rng, const Light* lights, int lights_size, const Geom* geoms,
+                          int geoms_size) {
+    LightSample sample = sampleLi(p, lights, lights_size, geoms, geoms_size, rng);
+
+    if (sample.lightIdx == -1 || sample.pdf == 0.f) {
+        path.throughput = glm::vec3(0.f);
+        path.remainingBounces = 0;
+        return;
+    }
+
+    glm::vec3 bsdf = evalBSDF(p, nor, -path.ray.dir, sample.wi, m);
+
+    float lambert = glm::max(0.f, glm::dot(sample.wi, nor));
+
+    path.throughput *= sample.radiance * bsdf * lambert / sample.pdf;
+    path.remainingBounces = 0;
 }

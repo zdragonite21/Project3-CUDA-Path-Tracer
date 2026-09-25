@@ -3,16 +3,14 @@
 #include "light_sampling.cuh"
 #include "sampling.cuh"
 #include "sceneStructs.h"
-#include "thrust_utils.h"
 
-__device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane,
-                                              RngEng& rng) {
+__device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane, RngEng& rng) {
     LightSample sample{};
     UnifDist<float> u01(0, 1);
 
     float surfaceArea = plane.transform.scale.x * plane.transform.scale.z;
-    glm::vec2 xi(u01(rng), u01(rng));
-    glm::vec3 lightP = multiplyMV(plane.transform.matrix, glm::vec4(xi, 0, 1));
+    glm::vec2 xi(u01(rng) - 0.5f, u01(rng) - 0.5f);
+    glm::vec3 lightP = multiplyMV(plane.transform.matrix, glm::vec4(xi.x, 0, xi.y, 1));
     glm::vec3 lightN =
         glm::normalize(multiplyMV(plane.transform.invTranspose, glm::vec4(0, 1, 0, 0)));
 
@@ -22,40 +20,36 @@ __device__ LightSample directSamplePlaneLight(glm::vec3 p, const Geom& plane,
 
     float cosT = glm::dot(-sample.wi, lightN);
     if (cosT <= 0.0001) {
-        sample.lightIdx = -1;
         return sample;
     }
 
     sample.pdf = sample.dist * sample.dist / (cosT * surfaceArea);
+    sample.lightIdx = 0;
     return sample;
 }
 
-__device__ LightSample directSampleAreaLight(glm::vec3 p, const Geom& geom,
-                                             RngEng& rng) {
+__device__ LightSample directSampleAreaLight(glm::vec3 p, const Geom& geom, RngEng& rng) {
     LightSample sample{};
     switch (geom.type) {
     case GeomType::PLANE:
         sample = directSamplePlaneLight(p, geom, rng);
         break;
     default:
-        sample.lightIdx = -1;
         break;
     }
     return sample;
 }
 
 __device__ LightSample sampleLi(glm::vec3 p, const Light* lights, int lights_size,
-                                const Geom* geoms, int geoms_size,
-                                RngEng& rng) {
+                                const Geom* geoms, int geoms_size, RngEng& rng) {
     LightSample sample{};
     if (lights_size == 0) {
-        sample.lightIdx = -1;
         return sample;
     }
     UnifDist<float> u01(0, 1);
 
-    int lightPr = static_cast<int>(u01(rng) * lights_size);
-    const Light& light = lights[lightPr];
+    int lightIdx = static_cast<int>(u01(rng) * lights_size);
+    const Light& light = lights[lightIdx];
 
     switch (light.type) {
     case LightType::AREA:
@@ -70,11 +64,10 @@ __device__ LightSample sampleLi(glm::vec3 p, const Light* lights, int lights_siz
     }
 
     Ray shadowRay = bx::SpawnRay(p, sample.wi);
-    if (visibleToLight(shadowRay, sample.dist, geoms, geoms_size)) {
+    if (visibleToLight(shadowRay, light.geomId, sample.dist, geoms, geoms_size)) {
         sample.pdf /= lights_size;
         sample.radiance = light.emission;
-    } else {
-        sample.lightIdx = -1;
+        sample.lightIdx = lightIdx;
     }
 
     return sample;
