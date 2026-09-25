@@ -19,7 +19,8 @@
 
 #define RUSSIAN_ROULETTE 1
 
-#define LI_DIRECT 1
+#define LI_DIRECT 0
+#define LI_NEE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -281,10 +282,18 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth, int lights_siz
             // TODO: replace this! you should be able to start with basically a
             // one-liner
             else {
-#if LI_DIRECT
+#if LI_NEE
                 glm::vec3 p = getPointOnRay(path.ray, intersection.t);
-                bounceRay(path, p, intersection.surfaceNormal, material, rng, lights, lights_size, geoms, geoms_size);
-                radiance += path.throughput;
+                glm::vec3 nor = intersection.surfaceNormal;
+                glm::vec3 direct = directRay(path, p, nor, material, rng, lights, lights_size, geoms, geoms_size);
+                radiance += path.throughput * direct;
+                scatterRay(path, p, nor, material, rng);
+
+#elif LI_DIRECT
+                glm::vec3 p = getPointOnRay(path.ray, intersection.t);
+                glm::vec3 direct = directRay(path, p, intersection.surfaceNormal, material, rng, lights, lights_size, geoms, geoms_size);
+                radiance += direct;
+                path.remaningBounces = 0;
 #else
                 glm::vec3 intersect = getPointOnRay(path.ray, intersection.t);
                 scatterRay(path, intersect, intersection.surfaceNormal, material, rng);

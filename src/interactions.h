@@ -37,6 +37,6 @@ __device__ void scatterRay(PathSegment& pathSegment, glm::vec3 intersect, glm::v
 __device__ glm::vec3 evalBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, glm::vec3 wiW,
                               const Material& m);
 
-__device__ void bounceRay(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
+__device__ glm::vec3 directRay(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
                           RngEng& rng, const Light* lights, int lights_size, const Geom* geoms,
                           int geoms_size);
