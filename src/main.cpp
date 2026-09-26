@@ -328,6 +328,8 @@ void mainLoop() {
         glfwSwapBuffers(window);
     }
 
+    saveImage();
+
     pathtraceFree();
     cudaDeviceReset();
 
@@ -391,7 +393,6 @@ int main(int argc, char** argv) {
 
     // GLFW main loop
     mainLoop();
-    saveImage();
 
     return 0;
 }
