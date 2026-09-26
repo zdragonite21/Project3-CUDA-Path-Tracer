@@ -6,7 +6,7 @@
 class Scene
 {
 private:
-    void loadFromJSON(const std::string& jsonName);
+    void load_from_json(const std::string& json_name);
 public:
     Scene(std::string filename);
 

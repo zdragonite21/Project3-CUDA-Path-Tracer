@@ -106,7 +106,7 @@ enum class BxdfFlag : uint8_t {
     Specular = 1 << 4,
 };
 
-// overload operators because BxFFlag is strongly typed
+// overload operators because BxdfFlag is strongly typed
 __host__ __device__ constexpr BxdfFlag operator|(BxdfFlag a, BxdfFlag b) {
     return static_cast<BxdfFlag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }

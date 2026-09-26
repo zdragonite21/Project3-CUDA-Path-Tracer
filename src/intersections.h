@@ -34,12 +34,12 @@ __host__ __device__ inline glm::vec3 multiply_mv(glm::mat4 m, glm::vec4 v) {
  * Test intersection between a ray and a transformed cube. Untransformed,
  * the cube ranges from -0.5 to 0.5 in each axis and is centered at the origin.
  *
- * @param isectPoint  Output parameter for point of intersection.
+ * @param isect_point  Output parameter for point of intersection.
  * @param normal             Output parameter for surface normal.
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* isectPoint,
+__host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* isect_point,
                                               glm::vec3* normal, bool* outside);
 
 // CHECKITOUT
@@ -47,15 +47,15 @@ __host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec
  * Test intersection between a ray and a transformed sphere. Untransformed,
  * the sphere always has radius 1 and is centered at the origin.
  *
- * @param isectPoint  Output parameter for point of intersection.
+ * @param isect_point  Output parameter for point of intersection.
  * @param normal             Output parameter for surface normal.
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r, glm::vec3* isectPoint,
+__host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r, glm::vec3* isect_point,
                                                  glm::vec3* normal, bool* outside);
 
-__host__ __device__ float plane_intersection_test(const Geom& plane, Ray r, glm::vec3* isectPoint,
+__host__ __device__ float plane_intersection_test(const Geom& plane, Ray r, glm::vec3* isect_point,
                                                 glm::vec3* normal, bool* outside);
 
-__device__ bool visible_to_light(Ray r, int lightGeomIdx, float lightDist, const Geom* geoms, int geoms_size);
+__device__ bool visible_to_light(Ray r, int light_geom_idx, float light_dist, const Geom* geoms, int num_geoms);

@@ -3,7 +3,7 @@
 #include "scene.h"
 #include "utilities.h"
 
-void init_data_container(GuiDataContainer* guiData);
+void init_data_container(GuiDataContainer* gui_data);
 void pathtrace_init(Scene* scene);
 void pathtrace_reset(Scene* scene);
 void pathtrace_free();

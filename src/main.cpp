@@ -26,41 +26,41 @@
 #include <sstream>
 #include <string>
 
-static std::string startTimeString;
+static std::string start_time_string;
 
 // For camera controls
-static bool leftMousePressed = false;
-static bool rightMousePressed = false;
-static bool middleMousePressed = false;
-static double lastX;
-static double lastY;
+static bool left_mouse_pressed = false;
+static bool right_mouse_pressed = false;
+static bool middle_mouse_pressed = false;
+static double last_x;
+static double last_y;
 
 static bool camchanged = true;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
 
 float zoom, theta, phi;
-glm::vec3 cameraPosition;
-glm::vec3 ogLookAt; // for recentering the camera
+glm::vec3 camera_position;
+glm::vec3 og_look_at; // for recentering the camera
 
 Scene* scene;
-GuiDataContainer* guiData;
-RenderState* renderState;
+GuiDataContainer* gui_data;
+RenderState* render_state;
 int iteration;
 
 int width;
 int height;
 
-GLuint positionLocation = 0;
-GLuint texcoordsLocation = 1;
-GLuint displayImage;
+GLuint position_location = 0;
+GLuint texcoords_location = 1;
+GLuint display_image;
 GLuint pbo;
 cudaGraphicsResource_t cuda_pixel_resource;
 
 GLFWwindow* window;
-GuiDataContainer* imguiData = NULL;
+GuiDataContainer* imgui_data = NULL;
 ImGuiIO* io = nullptr;
-bool mouseOverImGuiWinow = false;
+bool mouse_over_imgui_window = false;
 
 // Forward declarations for window loop and interactivity
 void run_cuda();
@@ -81,8 +81,8 @@ std::string current_time_string() {
 //-------------------------------
 
 void init_textures() {
-    glGenTextures(1, &displayImage);
-    glBindTexture(GL_TEXTURE_2D, displayImage);
+    glGenTextures(1, &display_image);
+    glBindTexture(GL_TEXTURE_2D, display_image);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
@@ -97,26 +97,26 @@ void init_vao(void) {
 
     GLushort indices[] = {0, 1, 3, 3, 1, 2};
 
-    GLuint vertexBufferObjID[3];
-    glGenBuffers(3, vertexBufferObjID);
+    GLuint vertex_buffer_obj_id[3];
+    glGenBuffers(3, vertex_buffer_obj_id);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjID[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_obj_id[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(positionLocation);
+    glVertexAttribPointer((GLuint)position_location, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_location);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjID[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_obj_id[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(texcoords), texcoords, GL_STATIC_DRAW);
-    glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(texcoordsLocation);
+    glVertexAttribPointer((GLuint)texcoords_location, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(texcoords_location);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vertexBufferObjID[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vertex_buffer_obj_id[2]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 }
 
 GLuint init_shader() {
-    const char* attribLocations[] = {"Position", "Texcoords"};
-    GLuint program = glsl_utility::create_default_program(attribLocations, 2);
+    const char* attrib_locations[] = {"Position", "Texcoords"};
+    GLuint program = glsl_utility::create_default_program(attrib_locations, 2);
     GLint location;
 
     // glUseProgram(program);
@@ -148,8 +148,8 @@ void cleanup_cuda() {
     if (pbo) {
         delete_pbo(&pbo);
     }
-    if (displayImage) {
-        delete_texture(&displayImage);
+    if (display_image) {
+        delete_texture(&display_image);
     }
 }
 
@@ -161,7 +161,7 @@ void init_pbo() {
     // set up vertex data parameter
     int num_texels = width * height;
     int num_values = num_texels * 4;
-    int size_tex_data = sizeof(GLubyte) * num_values;
+    int texture_data_size = sizeof(GLubyte) * num_values;
 
     // Generate a buffer ID called a PBO (Pixel Buffer Object)
     glGenBuffers(1, &pbo);
@@ -170,7 +170,7 @@ void init_pbo() {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
 
     // Allocate data for the buffer. 4-channel 8-bit image
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, size_tex_data, NULL, GL_DYNAMIC_COPY);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, texture_data_size, NULL, GL_DYNAMIC_COPY);
     cudaGraphicsGLRegisterBuffer(&cuda_pixel_resource, pbo, cudaGraphicsRegisterFlagsWriteDiscard);
 }
 
@@ -216,21 +216,21 @@ bool init() {
     init_textures();
     init_cuda();
     init_pbo();
-    GLuint passthroughProgram = init_shader();
+    GLuint passthrough_program = init_shader();
 
-    glUseProgram(passthroughProgram);
+    glUseProgram(passthrough_program);
     glActiveTexture(GL_TEXTURE0);
 
     return true;
 }
 
-void init_imgui_data(GuiDataContainer* guiData) {
-    imguiData = guiData;
+void init_imgui_data(GuiDataContainer* gui_data) {
+    imgui_data = gui_data;
 }
 
 // LOOK: Un-Comment to check ImGui Usage
 void render_imgui() {
-    mouseOverImGuiWinow = io->WantCaptureMouse;
+    mouse_over_imgui_window = io->WantCaptureMouse;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -259,7 +259,7 @@ void render_imgui() {
     //     counter++;
     // ImGui::SameLine();
     // ImGui::Text("counter = %d", counter);
-    ImGui::Text("Traced Depth %d", imguiData->traced_depth);
+    ImGui::Text("Traced Depth %d", imgui_data->traced_depth);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
                 ImGui::GetIO().Framerate);
     ImGui::End();
@@ -268,8 +268,8 @@ void render_imgui() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-bool MouseOverImGuiWindow() {
-    return mouseOverImGuiWinow;
+bool is_mouse_over_imgui_window() {
+    return mouse_over_imgui_window;
 }
 
 void save_image() {
@@ -282,14 +282,14 @@ void save_image() {
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
             int index = x + (y * width);
-            glm::vec3 pix = renderState->image[index];
+            glm::vec3 pix = render_state->image[index];
             img.set_pixel(width - 1 - x, y, glm::vec3(pix) / samples);
         }
     }
 
-    std::string filename = renderState->image_name;
+    std::string filename = render_state->image_name;
     std::ostringstream ss;
-    ss << filename << "." << startTimeString << "." << samples << "samp";
+    ss << filename << "." << start_time_string << "." << samples << "samp";
     filename = ss.str();
 
     // CHECKITOUT
@@ -310,7 +310,7 @@ void main_loop() {
             "CIS565 Path Tracer | " + utility_core::convert_int_to_string(iteration) + " Iterations";
         glfwSetWindowTitle(window, title.c_str());
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-        glBindTexture(GL_TEXTURE_2D, displayImage);
+        glBindTexture(GL_TEXTURE_2D, display_image);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -345,25 +345,25 @@ void main_loop() {
 //-------------------------------
 
 int main(int argc, char** argv) {
-    startTimeString = current_time_string();
+    start_time_string = current_time_string();
 
     if (argc < 2) {
         printf("Usage: %s SCENEFILE.json\n", argv[0]);
         return 1;
     }
 
-    const char* sceneFile = argv[1];
+    const char* scene_file = argv[1];
 
     // Load scene file
-    scene = new Scene(sceneFile);
+    scene = new Scene(scene_file);
 
-    // Create Instance for ImGUIData
-    guiData = new GuiDataContainer();
+    // Create ImGui data instance
+    gui_data = new GuiDataContainer();
 
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
-    renderState = &scene->state;
-    Camera& cam = renderState->camera;
+    render_state = &scene->state;
+    Camera& cam = render_state->camera;
     width = cam.resolution.x;
     height = cam.resolution.y;
 
@@ -372,23 +372,23 @@ int main(int argc, char** argv) {
     glm::vec3 right = glm::cross(view, up);
     up = glm::cross(right, view);
 
-    cameraPosition = cam.position;
+    camera_position = cam.position;
 
     // compute phi (horizontal) and theta (vertical) relative 3D axis
     // so, (0 0 1) is forward, (0 1 0) is up
-    glm::vec3 viewXZ = glm::vec3(view.x, 0.0f, view.z);
-    glm::vec3 viewZY = glm::vec3(0.0f, view.y, view.z);
-    phi = glm::acos(glm::dot(glm::normalize(viewXZ), glm::vec3(0, 0, -1)));
-    theta = glm::acos(glm::dot(glm::normalize(viewZY), glm::vec3(0, 1, 0)));
-    ogLookAt = cam.look_at;
-    zoom = glm::length(cam.position - ogLookAt);
+    glm::vec3 view_xz = glm::vec3(view.x, 0.0f, view.z);
+    glm::vec3 view_zy = glm::vec3(0.0f, view.y, view.z);
+    phi = glm::acos(glm::dot(glm::normalize(view_xz), glm::vec3(0, 0, -1)));
+    theta = glm::acos(glm::dot(glm::normalize(view_zy), glm::vec3(0, 1, 0)));
+    og_look_at = cam.look_at;
+    zoom = glm::length(cam.position - og_look_at);
 
     // Initialize CUDA and GL components
     init();
 
     // Initialize ImGui Data
-    init_imgui_data(guiData);
-    init_data_container(guiData);
+    init_imgui_data(gui_data);
+    init_data_container(gui_data);
 
     // GLFW main loop
     main_loop();
@@ -398,21 +398,21 @@ int main(int argc, char** argv) {
 
 void reset_accumulation() {
     iteration = 0;
-    Camera& cam = renderState->camera;
-    cameraPosition.x = zoom * sin(phi) * sin(theta);
-    cameraPosition.y = zoom * cos(theta);
-    cameraPosition.z = zoom * cos(phi) * sin(theta);
+    Camera& cam = render_state->camera;
+    camera_position.x = zoom * sin(phi) * sin(theta);
+    camera_position.y = zoom * cos(theta);
+    camera_position.z = zoom * cos(phi) * sin(theta);
 
-    cam.view = -glm::normalize(cameraPosition);
+    cam.view = -glm::normalize(camera_position);
     glm::vec3 v = cam.view;
     glm::vec3 u = glm::vec3(0, 1, 0);
     glm::vec3 r = glm::cross(v, u);
     cam.up = glm::cross(r, v);
     cam.right = r;
 
-    cam.position = cameraPosition;
-    cameraPosition += cam.look_at;
-    cam.position = cameraPosition;
+    cam.position = camera_position;
+    camera_position += cam.look_at;
+    cam.position = camera_position;
     camchanged = false;
 }
 
@@ -422,7 +422,7 @@ void run_cuda() {
         pathtrace_reset(scene);
     }
 
-    if (iteration < renderState->iterations) {
+    if (iteration < render_state->iterations) {
         cudaGraphicsMapResources(1, &cuda_pixel_resource);
 
         uchar4* pbo_dptr;
@@ -456,42 +456,42 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             break;
         case GLFW_KEY_SPACE:
             camchanged = true;
-            renderState = &scene->state;
-            Camera& cam = renderState->camera;
-            cam.look_at = ogLookAt;
+            render_state = &scene->state;
+            Camera& cam = render_state->camera;
+            cam.look_at = og_look_at;
             break;
         }
     }
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (MouseOverImGuiWindow()) {
+    if (is_mouse_over_imgui_window()) {
         return;
     }
 
-    leftMousePressed = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
-    rightMousePressed = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
-    middleMousePressed = (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS);
+    left_mouse_pressed = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
+    right_mouse_pressed = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
+    middle_mouse_pressed = (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS);
 }
 
 void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (xpos == lastX || ypos == lastY) {
+    if (xpos == last_x || ypos == last_y) {
         return; // otherwise, clicking back into window causes re-start
     }
 
-    if (leftMousePressed) {
+    if (left_mouse_pressed) {
         // compute new camera parameters
-        phi -= (xpos - lastX) / width;
-        theta -= (ypos - lastY) / height;
+        phi -= (xpos - last_x) / width;
+        theta -= (ypos - last_y) / height;
         theta = std::fmax(0.001f, std::fmin(theta, PI));
         camchanged = true;
-    } else if (rightMousePressed) {
-        zoom += (ypos - lastY) / height;
+    } else if (right_mouse_pressed) {
+        zoom += (ypos - last_y) / height;
         zoom = std::fmax(0.1f, zoom);
         camchanged = true;
-    } else if (middleMousePressed) {
-        renderState = &scene->state;
-        Camera& cam = renderState->camera;
+    } else if (middle_mouse_pressed) {
+        render_state = &scene->state;
+        Camera& cam = render_state->camera;
         glm::vec3 forward = cam.view;
         forward.y = 0.0f;
         forward = glm::normalize(forward);
@@ -499,11 +499,11 @@ void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
         right.y = 0.0f;
         right = glm::normalize(right);
 
-        cam.look_at -= (float)(xpos - lastX) * right * 0.01f;
-        cam.look_at += (float)(ypos - lastY) * forward * 0.01f;
+        cam.look_at -= (float)(xpos - last_x) * right * 0.01f;
+        cam.look_at += (float)(ypos - last_y) * forward * 0.01f;
         camchanged = true;
     }
 
-    lastX = xpos;
-    lastY = ypos;
+    last_x = xpos;
+    last_y = ypos;
 }

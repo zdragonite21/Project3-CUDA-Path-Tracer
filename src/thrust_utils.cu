@@ -13,21 +13,21 @@ struct IsPathTerminated {
 struct IsIsectHit {
     template <typename Tuple>
     __device__ bool operator()(const Tuple& t) const {
-        const MatId matId = thrust::get<2>(t);
-        return matId < UINT8_MAX;
+        const MatId mat_id = thrust::get<2>(t);
+        return mat_id < UINT8_MAX;
     }
 };
 
-void sort_paths(int num_paths, ShadeableIntersection* isects, MatId* matIds, PathSegment* paths, cudaStream_t stream) {
+void sort_paths(int num_paths, ShadeableIntersection* isects, MatId* mat_ids, PathSegment* paths, cudaStream_t stream) {
     auto policy = thrust::cuda::par_nosync.on(stream);
     auto zip_begin = thrust::make_zip_iterator(thrust::make_tuple(isects, paths));
-    thrust::sort_by_key(policy, matIds, matIds + num_paths, zip_begin);
+    thrust::sort_by_key(policy, mat_ids, mat_ids + num_paths, zip_begin);
 }
 
-int filter_missed(int num_paths, MatId* matIds, cudaStream_t stream) {
+int filter_missed(int num_paths, MatId* mat_ids, cudaStream_t stream) {
     auto policy = thrust::cuda::par_nosync.on(stream);
-    auto new_end = thrust::lower_bound(policy, matIds, matIds + num_paths, UINT8_MAX);
-    return new_end - matIds;
+    auto new_end = thrust::lower_bound(policy, mat_ids, mat_ids + num_paths, UINT8_MAX);
+    return new_end - mat_ids;
 }
 
 int compact_terminated(int num_paths, PathSegment* paths, cudaStream_t stream) {

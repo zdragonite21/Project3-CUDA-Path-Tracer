@@ -3,14 +3,14 @@
 #include <cfloat>
 #include <float.h>
 
-__host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* intersectionPoint,
+__host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* intersection_point,
                                               glm::vec3* normal, bool* outside) {
 
     glm::vec3 ro = multiply_mv(box.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(box.transform.inverse, glm::vec4(r.dir, 0.0f));
 
-    float tNear = -FLT_MAX;
-    float tFar = FLT_MAX;
+    float t_near = -FLT_MAX;
+    float t_far = FLT_MAX;
 
     for (int axis = 0; axis < 3; ++axis) {
         if (rd[axis] == 0.0f) {
@@ -27,21 +27,21 @@ __host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec
             t1 = tmp;
         }
 
-        tNear = glm::max(tNear, t0);
-        tFar = glm::min(tFar, t1);
+        t_near = glm::max(t_near, t0);
+        t_far = glm::min(t_far, t1);
     }
 
-    if (tNear > tFar || tFar <= 0.0f) {
+    if (t_near > t_far || t_far <= 0.0f) {
         return -1.0f;
     }
 
-    bool out = tNear > 0.0f;
-    float t = out ? tNear : tFar;
+    bool out = t_near > 0.0f;
+    float t = out ? t_near : t_far;
     if (outside) {
         *outside = out;
     }
-    if (intersectionPoint) {
-        *intersectionPoint = get_point_on_ray(r, t);
+    if (intersection_point) {
+        *intersection_point = get_point_on_ray(r, t);
     }
     if (normal) {
         glm::vec3 p = ro + t * rd;
@@ -61,7 +61,7 @@ __host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec
 }
 
 __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
-                                                 glm::vec3* intersectionPoint, glm::vec3* normal,
+                                                 glm::vec3* intersection_point, glm::vec3* normal,
                                                  bool* outside) {
     glm::vec3 ro = multiply_mv(sphere.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(sphere.transform.inverse, glm::vec4(r.dir, 0.0f));
@@ -75,13 +75,13 @@ __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
         return -1.f;
     }
 
-    float sqrtD = glm::sqrt(disc);
+    float sqrt_d = glm::sqrt(disc);
 
-    float t = (-half_b - sqrtD) / a;
+    float t = (-half_b - sqrt_d) / a;
 
     constexpr float eps = 1e-4f;
     if (t <= eps) {
-        t = (-half_b + sqrtD) / a;
+        t = (-half_b + sqrt_d) / a;
         if (t <= eps) {
             return -1.f;
         }
@@ -90,8 +90,8 @@ __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
     if (outside) {
         *outside = dot(ro, ro) >= 1.f;
     }
-    if (intersectionPoint) {
-        *intersectionPoint = get_point_on_ray(r, t);
+    if (intersection_point) {
+        *intersection_point = get_point_on_ray(r, t);
     }
     if (normal) {
         glm::vec3 p = ro + rd * t;
@@ -102,8 +102,8 @@ __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
 }
 
 __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
-                                                glm::vec3* intersectionPoint, glm::vec3* normal,
-                                                bool* backFacing) {
+                                                glm::vec3* intersection_point, glm::vec3* normal,
+                                                bool* back_facing) {
 
     glm::vec3 ro = multiply_mv(plane.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(plane.transform.inverse, glm::vec4(r.dir, 0.0f));
@@ -117,17 +117,17 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
         return -1;
     }
 
-    glm::vec3 pW = ro + rd * t;
+    glm::vec3 p_w = ro + rd * t;
 
-    if (glm::abs(pW.x) > 0.5 || glm::abs(pW.z) > 0.5) {
+    if (glm::abs(p_w.x) > 0.5 || glm::abs(p_w.z) > 0.5) {
         return -1;
     }
 
-    if (backFacing) {
-        *backFacing = rd.y > 0;
+    if (back_facing) {
+        *back_facing = rd.y > 0;
     }
-    if (intersectionPoint) {
-        *intersectionPoint = get_point_on_ray(r, t);
+    if (intersection_point) {
+        *intersection_point = get_point_on_ray(r, t);
     }
     if (normal) {
         *normal = glm::normalize(multiply_mv(plane.transform.inv_transpose, glm::vec4(0, 1, 0, 0)));
@@ -135,12 +135,12 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     return t;
 }
 
-__device__ bool visible_to_light(Ray r, int lightGeomIdx, float lightDist, const Geom* geoms, int geoms_size) {
-    float minT = lightDist;
+__device__ bool visible_to_light(Ray r, int light_geom_idx, float light_dist, const Geom* geoms, int num_geoms) {
+    float min_t = light_dist;
     float t;
 
-    for (int i = 0; i < geoms_size; ++i) {
-        if (i == lightGeomIdx) {
+    for (int i = 0; i < num_geoms; ++i) {
+        if (i == light_geom_idx) {
             continue;
         }
         const Geom& geom = geoms[i];
@@ -155,7 +155,7 @@ __device__ bool visible_to_light(Ray r, int lightGeomIdx, float lightDist, const
             t = sphere_intersection_test(geom, r, nullptr, nullptr, nullptr);
             break;
         }
-        if (t > 0 && t < minT) {
+        if (t > 0 && t < min_t) {
             return false;
         }
     }
