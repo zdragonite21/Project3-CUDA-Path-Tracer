@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sceneStructs.h"
+#include "scene_structs.h"
 #include <vector>
 
 class Scene

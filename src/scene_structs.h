@@ -10,7 +10,7 @@
 
 using MatId = uint8_t;
 
-enum GeomType { SPHERE, CUBE, PLANE };
+enum GeomType { Sphere, Cube, Plane };
 
 struct Ray {
     glm::vec3 org;
@@ -23,30 +23,30 @@ struct Transform {
     glm::vec3 scale;
     glm::mat4 matrix;
     glm::mat4 inverse;
-    glm::mat4 invTranspose;
+    glm::mat4 inv_transpose;
 };
 
 struct Geom {
     enum GeomType type;
-    int materialId;
+    int material_id;
 
     Transform transform;
 };
 
-enum class LightType { AREA, ENVIRONMENT };
+enum class LightType { Area, Environment };
 
 // for area lights, both light and material get the same emission (for convenience)
 // light -> geom -> material
 struct Light {
     glm::vec3 emission;
-    int geomId;
+    int geom_id;
     
     float env_strength;
 
     LightType type;
 };
 
-enum class MatType : uint8_t { DIFFUSE, CONDUCTOR, DIELECTRIC, EMISSIVE };
+enum class MatType : uint8_t { Diffuse, Conductor, Dielectric, Emissive };
 
 struct Material {
     glm::vec3 color;
@@ -64,40 +64,40 @@ struct Material {
 struct Camera {
     glm::ivec2 resolution;
     glm::vec3 position;
-    glm::vec3 lookAt;
+    glm::vec3 look_at;
     glm::vec3 view;
     glm::vec3 up;
     glm::vec3 right;
     glm::vec2 fov;
-    glm::vec2 pixelLength;
-    float lensRadius;
-    float focalDistance;
+    glm::vec2 pixel_length;
+    float lens_radius;
+    float focal_distance;
 };
 
 struct RenderState {
     Camera camera;
     unsigned int iterations;
-    int traceDepth;
+    int trace_depth;
     std::vector<glm::vec3> image;
-    std::string imageName;
+    std::string image_name;
 };
 
 struct PathSegment {
     Ray ray;
     glm::vec3 throughput;
-    int pixelIndex;
-    int remainingBounces;
+    int pixel_index;
+    int remaining_bounces;
 };
 
 // Use with a corresponding PathSegment to do:
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
 struct ShadeableIntersection {
-    glm::vec3 surfaceNormal;
+    glm::vec3 surface_normal;
     float t;
 };
 
-enum class BxDFFlag : uint8_t {
+enum class BxdfFlag : uint8_t {
     Unset = 0,
     Reflection = 1 << 0,
     Transmission = 1 << 1,
@@ -107,23 +107,23 @@ enum class BxDFFlag : uint8_t {
 };
 
 // overload operators because BxFFlag is strongly typed
-__host__ __device__ constexpr BxDFFlag operator|(BxDFFlag a, BxDFFlag b) {
-    return static_cast<BxDFFlag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+__host__ __device__ constexpr BxdfFlag operator|(BxdfFlag a, BxdfFlag b) {
+    return static_cast<BxdfFlag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
 
-__host__ __device__ constexpr BxDFFlag operator&(BxDFFlag a, BxDFFlag b) {
-    return static_cast<BxDFFlag>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+__host__ __device__ constexpr BxdfFlag operator&(BxdfFlag a, BxdfFlag b) {
+    return static_cast<BxdfFlag>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
-__host__ __device__ constexpr BxDFFlag& operator|=(BxDFFlag& a, BxDFFlag b) {
+__host__ __device__ constexpr BxdfFlag& operator|=(BxdfFlag& a, BxdfFlag b) {
     return a = a | b;
 }
 
-struct BSDFSample {
+struct BsdfSample {
     glm::vec3 wi;
     float pdf;
     glm::vec3 f;
-    BxDFFlag type;
+    BxdfFlag type;
 };
 
 struct LightSample {
@@ -131,5 +131,5 @@ struct LightSample {
     float dist;
     glm::vec3 radiance;
     float pdf;
-    int lightIdx;
+    int light_idx;
 };

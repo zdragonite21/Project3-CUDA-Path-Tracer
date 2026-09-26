@@ -36,8 +36,8 @@ void Scene::loadFromJSON(const std::string &jsonName) {
         const auto &p = item.value();
         Light newLight{};
         if (p["TYPE"] == "Environment") {
-            newLight.geomId = -1;
-            newLight.type = LightType::ENVIRONMENT;
+            newLight.geom_id = -1;
+            newLight.type = LightType::Environment;
             newLight.env_strength = p["STRENGTH"];
         }
         // TODO: integrate environment lighting
@@ -52,22 +52,22 @@ void Scene::loadFromJSON(const std::string &jsonName) {
         Material newMaterial{};
         if (p["TYPE"] == "Diffuse") {
             const auto &col = p["RGB"];
-            newMaterial.type = MatType::DIFFUSE;
+            newMaterial.type = MatType::Diffuse;
             newMaterial.color = glm::vec3(col[0], col[1], col[2]);
         } else if (p["TYPE"] == "Emitting") {
             const auto &col = p["EMISSION"];
-            newMaterial.type = MatType::EMISSIVE;
+            newMaterial.type = MatType::Emissive;
             newMaterial.emission = glm::vec3(col[0], col[1], col[2]) *
                                    static_cast<float>(p["STRENGTH"]);
         } else if (p["TYPE"] == "Conductor") {
             const auto &eta = p["ETA"];
             const auto &k = p["K"];
-            newMaterial.type = MatType::CONDUCTOR;
+            newMaterial.type = MatType::Conductor;
             newMaterial.eta = glm::vec3(eta[0], eta[1], eta[2]);
             newMaterial.k = glm::vec3(k[0], k[1], k[2]);
             newMaterial.roughness = p["ROUGHNESS"];
         } else if (p["TYPE"] == "Dielectric") {
-            newMaterial.type = MatType::DIELECTRIC;
+            newMaterial.type = MatType::Dielectric;
             newMaterial.roughness = p["ROUGHNESS"];
             newMaterial.ior = p["IOR"];
         }
@@ -79,18 +79,18 @@ void Scene::loadFromJSON(const std::string &jsonName) {
         const auto &type = p["TYPE"];
         Geom newGeom;
         if (type == "cube") {
-            newGeom.type = CUBE;
+            newGeom.type = Cube;
         } else if (type == "plane") {
-            newGeom.type = PLANE;
+            newGeom.type = Plane;
         } else {
-            newGeom.type = SPHERE;
+            newGeom.type = Sphere;
         }
-        newGeom.materialId = MatNameToID[p["MATERIAL"]];
-        if (materials[newGeom.materialId].type == MatType::EMISSIVE) {
+        newGeom.material_id = MatNameToID[p["MATERIAL"]];
+        if (materials[newGeom.material_id].type == MatType::Emissive) {
             Light newLight{};
-            newLight.geomId = geoms.size();
-            newLight.type = LightType::AREA;
-            newLight.emission = materials[newGeom.materialId].emission;
+            newLight.geom_id = geoms.size();
+            newLight.type = LightType::Area;
+            newLight.emission = materials[newGeom.material_id].emission;
             lights.push_back(newLight);
         }
         Transform newTrans;
@@ -100,10 +100,10 @@ void Scene::loadFromJSON(const std::string &jsonName) {
         newTrans.translation = glm::vec3(trans[0], trans[1], trans[2]);
         newTrans.rotation = glm::vec3(rotat[0], rotat[1], rotat[2]);
         newTrans.scale = glm::vec3(scale[0], scale[1], scale[2]);
-        newTrans.matrix = utilityCore::buildTransformationMatrix(
+        newTrans.matrix = utility_core::build_transformation_matrix(
             newTrans.translation, newTrans.rotation, newTrans.scale);
         newTrans.inverse = glm::inverse(newTrans.matrix);
-        newTrans.invTranspose = glm::inverseTranspose(newTrans.matrix);
+        newTrans.inv_transpose = glm::inverseTranspose(newTrans.matrix);
         newGeom.transform = newTrans;
 
         geoms.push_back(newGeom);
@@ -114,16 +114,16 @@ void Scene::loadFromJSON(const std::string &jsonName) {
     camera.resolution.x = cameraData["RES"][0];
     camera.resolution.y = cameraData["RES"][1];
     float fovy = cameraData["FOVY"];
-    camera.lensRadius = cameraData["LENSRADIUS"];
-    camera.focalDistance = cameraData["FOCALDISTANCE"];
+    camera.lens_radius = cameraData["LENSRADIUS"];
+    camera.focal_distance = cameraData["FOCALDISTANCE"];
     state.iterations = cameraData["ITERATIONS"];
-    state.traceDepth = cameraData["DEPTH"];
-    state.imageName = cameraData["FILE"];
+    state.trace_depth = cameraData["DEPTH"];
+    state.image_name = cameraData["FILE"];
     const auto &pos = cameraData["EYE"];
     const auto &lookat = cameraData["LOOKAT"];
     const auto &up = cameraData["UP"];
     camera.position = glm::vec3(pos[0], pos[1], pos[2]);
-    camera.lookAt = glm::vec3(lookat[0], lookat[1], lookat[2]);
+    camera.look_at = glm::vec3(lookat[0], lookat[1], lookat[2]);
     camera.up = glm::vec3(up[0], up[1], up[2]);
 
     // calculate fov based on resolution
@@ -132,10 +132,10 @@ void Scene::loadFromJSON(const std::string &jsonName) {
     float fovx = (atan(xscaled) * 180) / PI;
     camera.fov = glm::vec2(fovx, fovy);
 
-    camera.pixelLength = glm::vec2(2 * xscaled / (float)camera.resolution.x,
+    camera.pixel_length = glm::vec2(2 * xscaled / (float)camera.resolution.x,
     2 * yscaled / (float)camera.resolution.y);
     
-    camera.view = glm::normalize(camera.lookAt - camera.position);
+    camera.view = glm::normalize(camera.look_at - camera.position);
     camera.right = glm::normalize(glm::cross(camera.view, camera.up));
 
     // set up render camera stuff

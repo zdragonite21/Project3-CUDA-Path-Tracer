@@ -1,7 +1,7 @@
 #include "bxdf_utils.cuh"
 #include "interactions.h"
 #include "sampling.cuh"
-#include "sceneStructs.h"
+#include "scene_structs.h"
 #include "utilities.h"
 #include "light_sampling.cuh"
 
@@ -64,72 +64,72 @@ __device__ __forceinline__ glm::vec3 evalDiffuse(glm::vec3 color) {
     return color * INV_PI;
 }
 
-__device__ BSDFSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
-    BSDFSample sample;
+__device__ BsdfSample sampleDiffuse(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
+    BsdfSample sample;
     sample.wi = calculateRandomDirectionInCosineHemisphere(rng);
-    sample.pdf = bx::CosTheta(sample.wi) * INV_PI;
+    sample.pdf = bx::cos_theta(sample.wi) * INV_PI;
     sample.f = evalDiffuse(m.color);
-    sample.type = BxDFFlag::Diffuse;
+    sample.type = BxdfFlag::Diffuse;
 
     return sample;
 }
 
 // assumes the medium is air and not spectral
-__device__ BSDFSample sampleSmoothDielectric(glm::vec3 p, glm::vec3 wo, const Material& m,
+__device__ BsdfSample sampleSmoothDielectric(glm::vec3 p, glm::vec3 wo, const Material& m,
                                              RngEng& rng) {
-    BSDFSample sample;
+    BsdfSample sample;
     UnifDist<float> u01(0, 1);
 
     // etaI = 1.f because we assume air here
-    float r = fresnelDielectricEval(bx::CosTheta(wo), 1.0f, m.ior);
+    float r = fresnelDielectricEval(bx::cos_theta(wo), 1.0f, m.ior);
     float t = 1.f - r;
 
     if (u01(rng) < r / (r + t)) {
         // sample perfect specular reflection
         sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
         sample.pdf = r / (r + t);
-        sample.f = glm::vec3(r) / glm::abs(bx::CosTheta(sample.wi));
-        sample.type = BxDFFlag::Reflection;
+        sample.f = glm::vec3(r) / glm::abs(bx::cos_theta(sample.wi));
+        sample.type = BxdfFlag::Reflection;
     } else {
         // sample perfect specular transmission
-        bool entering = bx::CosTheta(wo) > 0;
+        bool entering = bx::cos_theta(wo) > 0;
         float etaI = entering ? 1.0 : m.ior;
         float etaT = entering ? m.ior : 1.0;
         float eta = etaI / etaT;
         glm::vec3 wi;
         if (!bx::Refract(wo, bx::Faceforward(glm::vec3(0, 0, 1), wo), eta, wi)) {
             // total internal reflection
-            sample.type = BxDFFlag::Unset;
+            sample.type = BxdfFlag::Unset;
             sample.f = glm::vec3(0);
             return sample;
         }
         sample.wi = wi;
         sample.pdf = t / (r + t);
-        sample.f = eta * eta * glm::vec3(t) / glm::abs(bx::CosTheta(sample.wi));
-        sample.type = BxDFFlag::Transmission;
+        sample.f = eta * eta * glm::vec3(t) / glm::abs(bx::cos_theta(sample.wi));
+        sample.type = BxdfFlag::Transmission;
     }
 
-    sample.type |= BxDFFlag::Specular;
+    sample.type |= BxdfFlag::Specular;
 
     return sample;
 }
 
 // assumes the medium is air and rgb approx, not spectral
-__device__ BSDFSample sampleSmoothConductor(glm::vec3 p, glm::vec3 wo, const Material& m) {
-    BSDFSample sample;
+__device__ BsdfSample sampleSmoothConductor(glm::vec3 p, glm::vec3 wo, const Material& m) {
+    BsdfSample sample;
 
     sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
     sample.pdf = 1.f;
     // etaI for air is 1
-    glm::vec3 fr = fresnelConductorEval(bx::CosTheta(sample.wi), glm::vec3(1), m.eta, m.k);
-    sample.f = fr / glm::abs(bx::CosTheta(sample.wi));
-    sample.type = BxDFFlag::Reflection | BxDFFlag::Specular;
+    glm::vec3 fr = fresnelConductorEval(bx::cos_theta(sample.wi), glm::vec3(1), m.eta, m.k);
+    sample.f = fr / glm::abs(bx::cos_theta(sample.wi));
+    sample.type = BxdfFlag::Reflection | BxdfFlag::Specular;
 
     return sample;
 }
 
-__device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
-    BSDFSample sample{};
+__device__ BsdfSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
+    BsdfSample sample{};
     if (m.roughness == 0.0) {
         sample = sampleSmoothDielectric(p, wo, m, rng);
     }
@@ -137,8 +137,8 @@ __device__ BSDFSample sampleDielectric(glm::vec3 p, glm::vec3 wo, const Material
     return sample;
 }
 
-__device__ BSDFSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
-    BSDFSample sample{};
+__device__ BsdfSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
+    BsdfSample sample{};
     if (m.roughness == 0.0) {
         sample = sampleSmoothConductor(p, wo, m);
     }
@@ -146,33 +146,33 @@ __device__ BSDFSample sampleConductor(glm::vec3 p, glm::vec3 wo, const Material&
     return sample;
 }
 
-__device__ BSDFSample sampleBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, const Material& m,
+__device__ BsdfSample sample_bsdf(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, const Material& m,
                                  RngEng& rng) {
-    glm::vec3 wo = bx::worldToLocal(nor) * woW;
+    glm::vec3 wo = bx::world_to_local(nor) * woW;
 
-    BSDFSample sample{};
+    BsdfSample sample{};
     switch (m.type) {
-    case MatType::DIFFUSE:
+    case MatType::Diffuse:
         sample = sampleDiffuse(p, wo, m, rng);
         break;
-    case MatType::DIELECTRIC:
+    case MatType::Dielectric:
         sample = sampleDielectric(p, wo, m, rng);
         break;
-    case MatType::CONDUCTOR:
+    case MatType::Conductor:
         sample = sampleConductor(p, wo, m, rng);
         break;
-    case MatType::EMISSIVE:
+    case MatType::Emissive:
         return sample;
     }
 
-    sample.wi = bx::localToWorld(nor) * sample.wi;
+    sample.wi = bx::local_to_world(nor) * sample.wi;
     return sample;
 }
 
-__device__ glm::vec3 evalBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, glm::vec3 wiW,
+__device__ glm::vec3 eval_bsdf(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, glm::vec3 wiW,
                               const Material& m) {
-    glm::vec3 wo = bx::worldToLocal(nor) * woW;
-    glm::vec3 wi = bx::worldToLocal(nor) * wiW;
+    glm::vec3 wo = bx::world_to_local(nor) * woW;
+    glm::vec3 wi = bx::world_to_local(nor) * wiW;
 
     // lambertian term will be 0
     if (wo.z == 0.0) {
@@ -180,15 +180,15 @@ __device__ glm::vec3 evalBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, glm::ve
     }
 
     switch (m.type) {
-    case MatType::DIFFUSE:
+    case MatType::Diffuse:
         return evalDiffuse(m.color);
-    case MatType::DIELECTRIC:
+    case MatType::Dielectric:
         if (m.roughness == 0.f) {
             return glm::vec3(0.f);
         }
         // implement microfacet
         return glm::vec3(0.f);
-    case MatType::CONDUCTOR:
+    case MatType::Conductor:
         if (m.roughness == 0.f) {
             return glm::vec3(0.f);
         }
@@ -199,37 +199,37 @@ __device__ glm::vec3 evalBSDF(glm::vec3 p, glm::vec3 nor, glm::vec3 woW, glm::ve
     }
 }
 
-__device__ float pdfBSDF() {
+__device__ float pdf_bsdf() {
     return 0.0;
 }
 
-__device__ void scatterRay(PathSegment& pathSegment, glm::vec3 p, glm::vec3 normal,
+__device__ void scatter_ray(PathSegment& pathSegment, glm::vec3 p, glm::vec3 normal,
                            const Material& m, RngEng& rng) {
 
-    BSDFSample s = sampleBSDF(p, normal, -pathSegment.ray.dir, m, rng);
+    BsdfSample s = sample_bsdf(p, normal, -pathSegment.ray.dir, m, rng);
 
     float lambert = glm::abs(glm::dot(s.wi, normal));
 
-    if (s.type == BxDFFlag::Unset || s.pdf == 0.0) {
+    if (s.type == BxdfFlag::Unset || s.pdf == 0.0) {
         pathSegment.throughput = glm::vec3(0.0);
-        pathSegment.remainingBounces = 0;
+        pathSegment.remaining_bounces = 0;
     } else {
         pathSegment.throughput *= s.f * lambert / s.pdf;
-        pathSegment.ray = bx::SpawnRay(p, s.wi);
-        pathSegment.remainingBounces--;
+        pathSegment.ray = bx::spawn_ray(p, s.wi);
+        pathSegment.remaining_bounces--;
     }
 }
 
-__device__ glm::vec3 directRay(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
+__device__ glm::vec3 estimate_direct_lighting(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
                           RngEng& rng, const Light* lights, int lights_size, const Geom* geoms,
                           int geoms_size) {
-    cstd::optional<LightSample> sample = sampleLi(p, nor, lights, lights_size, geoms, geoms_size, rng);
+    cstd::optional<LightSample> sample = sample_li(p, nor, lights, lights_size, geoms, geoms_size, rng);
 
     if (!sample || sample->pdf == 0.f) {
         return glm::vec3(0.f);
     }
 
-    glm::vec3 bsdf = evalBSDF(p, nor, -path.ray.dir, sample->wi, m);
+    glm::vec3 bsdf = eval_bsdf(p, nor, -path.ray.dir, sample->wi, m);
     float lambert = glm::max(0.f, glm::dot(sample->wi, nor));
 
     return sample->radiance * bsdf * lambert / sample->pdf;

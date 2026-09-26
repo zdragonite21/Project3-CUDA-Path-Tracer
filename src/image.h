@@ -8,14 +8,14 @@
 class Image
 {
 private:
-    int xSize;
-    int ySize;
+    int width;
+    int height;
     std::vector<glm::vec3> pixels;
 
 public:
     Image(int x, int y);
     ~Image();
-    void setPixel(int x, int y, const glm::vec3 &pixel);
-    void savePNG(const std::string &baseFilename);
-    void saveHDR(const std::string &baseFilename);
+    void set_pixel(int x, int y, const glm::vec3 &pixel);
+    void save_png(const std::string &base_filename);
+    void save_hdr(const std::string &base_filename);
 };

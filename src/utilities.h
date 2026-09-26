@@ -19,24 +19,24 @@
 
 class GuiDataContainer {
   public:
-    GuiDataContainer() : TracedDepth(0) {}
-    int TracedDepth;
+    GuiDataContainer() : traced_depth(0) {}
+    int traced_depth;
 };
 
-namespace utilityCore {
-extern void coordinateSystem(glm::vec3 in_nor, glm::vec3 &out_tan,
+namespace utility_core {
+extern void coordinate_system(glm::vec3 in_nor, glm::vec3 &out_tan,
                                           glm::vec3 &out_bit);
 extern int divup(int x, int n);
 extern float clamp(float f, float min, float max);
-extern bool replaceString(std::string &str, const std::string &from,
+extern bool replace_string(std::string &str, const std::string &from,
                           const std::string &to);
-extern glm::vec3 clampRGB(glm::vec3 color);
-extern bool epsilonCheck(float a, float b);
-extern std::vector<std::string> tokenizeString(std::string str);
-extern glm::mat4 buildTransformationMatrix(glm::vec3 translation,
+extern glm::vec3 clamp_rgb(glm::vec3 color);
+extern bool epsilon_check(float a, float b);
+extern std::vector<std::string> tokenize_string(std::string str);
+extern glm::mat4 build_transformation_matrix(glm::vec3 translation,
                                            glm::vec3 rotation, glm::vec3 scale);
-extern std::string convertIntToString(int number);
+extern std::string convert_int_to_string(int number);
 extern std::istream &
-safeGetline(std::istream &is,
+safe_getline(std::istream &is,
             std::string &t); // Thanks to http://stackoverflow.com/a/6089413
-} // namespace utilityCore
+} // namespace utility_core

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sceneStructs.h"
+#include "scene_structs.h"
 #include <thrust/random.h>
 
 using RngEng = thrust::default_random_engine;

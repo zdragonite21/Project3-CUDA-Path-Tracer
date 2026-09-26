@@ -1,4 +1,4 @@
-#include "sceneStructs.h"
+#include "scene_structs.h"
 #include "thrust_utils.h"
 #include <thrust/binary_search.h>
 #include <thrust/partition.h>
@@ -6,7 +6,7 @@
 
 struct IsPathTerminated {
     __host__ __device__ bool operator()(const PathSegment& ps) const {
-        return ps.remainingBounces <= 0;
+        return ps.remaining_bounces <= 0;
     }
 };
 

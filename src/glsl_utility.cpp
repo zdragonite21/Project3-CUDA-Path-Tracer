@@ -2,7 +2,7 @@
 // Written by Varun Sampath, Patrick Cozzi, and Karl Li.
 // Copyright (c) 2012 University of Pennsylvania
 
-#include "glslUtility.hpp"
+#include "glsl_utility.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -12,7 +12,7 @@
 
 using std::ios;
 
-namespace glslUtility
+namespace glsl_utility
 {
 // embedded passthrough shaders so that default passthrough shaders don't need to be loaded
 static std::string passthroughVS =
@@ -42,7 +42,7 @@ typedef struct
     GLint geometry;
 } shaders_t;
 
-char* loadFile(const char *fname, GLint &fSize)
+char* load_file(const char *fname, GLint &fSize)
 {
     // file read based on example in cplusplus.com tutorial
     std::ifstream file (fname, ios::in | ios::binary | ios::ate);
@@ -62,10 +62,10 @@ char* loadFile(const char *fname, GLint &fSize)
     exit(EXIT_FAILURE);
 }
 
-// printShaderInfoLog
+// print_shader_info_log
 // From OpenGL Shading Language 3rd Edition, p215-216
 // Display (hopefully) useful error messages if shader fails to compile
-void printShaderInfoLog(GLint shader)
+void print_shader_info_log(GLint shader)
 {
     int infoLogLen = 0;
     int charsWritten = 0;
@@ -83,7 +83,7 @@ void printShaderInfoLog(GLint shader)
     }
 }
 
-void printLinkInfoLog(GLint prog)
+void print_link_info_log(GLint prog)
 {
     int infoLogLen = 0;
     int charsWritten = 0;
@@ -101,7 +101,7 @@ void printLinkInfoLog(GLint prog)
     }
 }
 
-void compileShader(const char* shaderName, const char * shaderSource, GLenum shaderType, GLint &shaders)
+void compile_shader(const char* shaderName, const char * shaderSource, GLenum shaderType, GLint &shaders)
 {
     GLint s;
     s = glCreateShader(shaderType);
@@ -120,24 +120,24 @@ void compileShader(const char* shaderName, const char * shaderSource, GLenum sha
     {
         std::cout << shaderName << " did not compile" << std::endl;
     }
-    printShaderInfoLog(s);
+    print_shader_info_log(s);
 
     shaders = s;
 
     delete [] ss;
 }
 
-shaders_t loadDefaultShaders()
+shaders_t load_default_shaders()
 {
     shaders_t out;
 
-    compileShader("Passthrough Vertex", passthroughVS.c_str(), GL_VERTEX_SHADER, (GLint&)out.vertex);
-    compileShader("Passthrough Fragment", passthroughFS.c_str(), GL_FRAGMENT_SHADER, (GLint&)out.fragment);
+    compile_shader("Passthrough Vertex", passthroughVS.c_str(), GL_VERTEX_SHADER, (GLint&)out.vertex);
+    compile_shader("Passthrough Fragment", passthroughFS.c_str(), GL_FRAGMENT_SHADER, (GLint&)out.fragment);
 
     return out;
 }
 
-shaders_t loadShaders(const char * vert_path, const char * frag_path, const char * geom_path = 0)
+shaders_t load_shaders(const char * vert_path, const char * frag_path, const char * geom_path = 0)
 {
     shaders_t out;
 
@@ -146,25 +146,25 @@ shaders_t loadShaders(const char * vert_path, const char * frag_path, const char
     char *vertexSource, *fragmentSource, *geometrySource;
     const char *vv, *ff, *gg;
 
-    vertexSource = loadFile(vert_path, vlen);
+    vertexSource = load_file(vert_path, vlen);
     vv = vertexSource;
-    compileShader("Vertex", vv, GL_VERTEX_SHADER, (GLint&)out.vertex);
+    compile_shader("Vertex", vv, GL_VERTEX_SHADER, (GLint&)out.vertex);
 
-    fragmentSource = loadFile(frag_path, flen);
+    fragmentSource = load_file(frag_path, flen);
     ff = fragmentSource;
-    compileShader("Fragment", ff, GL_FRAGMENT_SHADER, (GLint&)out.fragment);
+    compile_shader("Fragment", ff, GL_FRAGMENT_SHADER, (GLint&)out.fragment);
 
     if (geom_path)
     {
-        geometrySource = loadFile(geom_path, glen);
+        geometrySource = load_file(geom_path, glen);
         gg = geometrySource;
-        compileShader("Geometry", gg, GL_GEOMETRY_SHADER, (GLint&)out.geometry);
+        compile_shader("Geometry", gg, GL_GEOMETRY_SHADER, (GLint&)out.geometry);
     }
 
     return out;
 }
 
-void attachAndLinkProgram( GLuint program, shaders_t shaders)
+void attach_and_link_program( GLuint program, shaders_t shaders)
 {
     glAttachShader(program, shaders.vertex);
     glAttachShader(program, shaders.fragment);
@@ -176,12 +176,12 @@ void attachAndLinkProgram( GLuint program, shaders_t shaders)
     {
         std::cout << "Program did not link." << std::endl;
     }
-    printLinkInfoLog(program);
+    print_link_info_log(program);
 }
 
-GLuint createDefaultProgram(const char *attributeLocations[], GLuint numberOfLocations)
+GLuint create_default_program(const char *attributeLocations[], GLuint numberOfLocations)
 {
-    glslUtility::shaders_t shaders = glslUtility::loadDefaultShaders();
+    glsl_utility::shaders_t shaders = glsl_utility::load_default_shaders();
 
     GLuint program = glCreateProgram();
 
@@ -190,18 +190,18 @@ GLuint createDefaultProgram(const char *attributeLocations[], GLuint numberOfLoc
         glBindAttribLocation(program, i, attributeLocations[i]);
     }
 
-    glslUtility::attachAndLinkProgram(program, shaders);
+    glsl_utility::attach_and_link_program(program, shaders);
 
     return program;
 }
 
-GLuint createProgram(
+GLuint create_program(
     const char *vertexShaderPath, 
     const char *fragmentShaderPath,
     const char *attributeLocations[],
     GLuint numberOfLocations)
 {
-    glslUtility::shaders_t shaders = glslUtility::loadShaders(vertexShaderPath, fragmentShaderPath);
+    glsl_utility::shaders_t shaders = glsl_utility::load_shaders(vertexShaderPath, fragmentShaderPath);
 
     GLuint program = glCreateProgram();
 
@@ -210,8 +210,8 @@ GLuint createProgram(
         glBindAttribLocation(program, i, attributeLocations[i]);
     }
 
-    glslUtility::attachAndLinkProgram(program, shaders);
+    glsl_utility::attach_and_link_program(program, shaders);
 
     return program;
 }
-} // namespace glslUtility
+} // namespace glsl_utility

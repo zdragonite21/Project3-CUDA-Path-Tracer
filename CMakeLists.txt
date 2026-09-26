@@ -53,10 +53,10 @@ set(headers
     src/image.h
     src/interactions.h
     src/intersections.h
-    src/glslUtility.hpp
+    src/glsl_utility.hpp
     src/pathtrace.h
     src/scene.h
-    src/sceneStructs.h
+    src/scene_structs.h
     src/utilities.h
     src/thrust_utils.h
     src/sampling.cuh
@@ -68,7 +68,7 @@ set(sources
     src/main.cpp
     src/stb.cpp
     src/image.cpp
-    src/glslUtility.cpp
+    src/glsl_utility.cpp
     src/pathtrace.cu
     src/intersections.cu
     src/interactions.cu

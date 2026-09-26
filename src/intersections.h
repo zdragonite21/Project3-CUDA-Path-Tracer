@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sceneStructs.h"
+#include "scene_structs.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>
@@ -18,14 +18,14 @@ __host__ __device__ inline unsigned int utilhash(unsigned int a) {
     return a;
 }
 
-__host__ __device__ inline glm::vec3 getPointOnRay(Ray r, float t) {
+__host__ __device__ inline glm::vec3 get_point_on_ray(Ray r, float t) {
     return r.org + t * r.dir;
 }
 
 /**
  * Multiplies a mat4 and a vec4 and returns a vec3 clipped from the vec4.
  */
-__host__ __device__ inline glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
+__host__ __device__ inline glm::vec3 multiply_mv(glm::mat4 m, glm::vec4 v) {
     return glm::vec3(m * v);
 }
 
@@ -39,7 +39,7 @@ __host__ __device__ inline glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float boxIntersectionTest(const Geom& box, Ray r, glm::vec3* isectPoint,
+__host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* isectPoint,
                                               glm::vec3* normal, bool* outside);
 
 // CHECKITOUT
@@ -52,10 +52,10 @@ __host__ __device__ float boxIntersectionTest(const Geom& box, Ray r, glm::vec3*
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float sphereIntersectionTest(const Geom& sphere, Ray r, glm::vec3* isectPoint,
+__host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r, glm::vec3* isectPoint,
                                                  glm::vec3* normal, bool* outside);
 
-__host__ __device__ float planeIntersectionTest(const Geom& plane, Ray r, glm::vec3* isectPoint,
+__host__ __device__ float plane_intersection_test(const Geom& plane, Ray r, glm::vec3* isectPoint,
                                                 glm::vec3* normal, bool* outside);
 
-__device__ bool visibleToLight(Ray r, int lightGeomIdx, float lightDist, const Geom* geoms, int geoms_size);
+__device__ bool visible_to_light(Ray r, int lightGeomIdx, float lightDist, const Geom* geoms, int geoms_size);
