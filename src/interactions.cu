@@ -223,14 +223,14 @@ __device__ void scatterRay(PathSegment& pathSegment, glm::vec3 p, glm::vec3 norm
 __device__ glm::vec3 directRay(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
                           RngEng& rng, const Light* lights, int lights_size, const Geom* geoms,
                           int geoms_size) {
-    LightSample sample = sampleLi(p, nor, lights, lights_size, geoms, geoms_size, rng);
+    cstd::optional<LightSample> sample = sampleLi(p, nor, lights, lights_size, geoms, geoms_size, rng);
 
-    if (sample.lightIdx == -1 || sample.pdf == 0.f) {
+    if (!sample || sample->pdf == 0.f) {
         return glm::vec3(0.f);
     }
 
-    glm::vec3 bsdf = evalBSDF(p, nor, -path.ray.dir, sample.wi, m);
-    float lambert = glm::max(0.f, glm::dot(sample.wi, nor));
+    glm::vec3 bsdf = evalBSDF(p, nor, -path.ray.dir, sample->wi, m);
+    float lambert = glm::max(0.f, glm::dot(sample->wi, nor));
 
-    return sample.radiance * bsdf * lambert / sample.pdf;
+    return sample->radiance * bsdf * lambert / sample->pdf;
 }

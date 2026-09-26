@@ -132,6 +132,4 @@ struct LightSample {
     glm::vec3 radiance;
     float pdf;
     int lightIdx;
-
-    __device__ LightSample() : wi{}, dist{}, radiance{}, pdf{}, lightIdx(-1) {}
 };
