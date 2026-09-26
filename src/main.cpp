@@ -155,9 +155,6 @@ void cleanupCuda() {
 
 void initCuda() {
     cudaSetDevice(0);
-
-    // Clean up on program exit
-    atexit(cleanupCuda);
 }
 
 void initPBO() {
@@ -332,6 +329,7 @@ void mainLoop() {
     saveImage();
 
     pathtraceFree();
+    cleanupCuda();
     cudaDeviceReset();
 
     ImGui_ImplOpenGL3_Shutdown();
@@ -441,7 +439,6 @@ void runCuda() {
         cudaGraphicsUnmapResources(1, &cuda_pixel_resource);
     } else {
         glfwSetWindowShouldClose(window, GL_TRUE);
-        exit(EXIT_SUCCESS);
     }
 }
 

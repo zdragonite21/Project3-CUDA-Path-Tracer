@@ -3,13 +3,14 @@
 #include <glm/glm.hpp>
 
 #include <string>
+#include <vector>
 
 class Image
 {
 private:
     int xSize;
     int ySize;
-    glm::vec3 *pixels;
+    std::vector<glm::vec3> pixels;
 
 public:
     Image(int x, int y);

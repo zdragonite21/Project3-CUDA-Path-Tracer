@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include <cuda_device_runtime_api.h>
 #include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
 
 #include "interactions.h"
 #include "intersections.h"
@@ -385,13 +386,13 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
     // Send results to OpenGL buffer for rendering
     sendImageToPBO<<<blocksPerGrid2d, blockSize2d, 0, pt_stream>>>(pbo, cam.resolution, iter,
-                                                                    dev_image);
+                                                                   dev_image);
     checkCUDAError("pathtrace");
 }
 
 void copyImageToHost() {
     const Camera& cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
-    cudaMemcpyAsync(hst_scene->state.image.data(), dev_image, pixelcount * sizeof(glm::vec3),
-                    cudaMemcpyDeviceToHost, pt_stream);
+    cudaMemcpy(hst_scene->state.image.data(), dev_image, pixelcount * sizeof(glm::vec3),
+               cudaMemcpyDeviceToHost);
 }
