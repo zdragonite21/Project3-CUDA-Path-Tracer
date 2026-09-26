@@ -432,8 +432,7 @@ void runCuda() {
         cudaGraphicsResourceGetMappedPointer((void**)&pbo_dptr, &bytes, cuda_pixel_resource);
 
         // execute the kernel
-        int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        pathtrace(pbo_dptr, iteration);
 
         // unmap buffer object
         cudaGraphicsUnmapResources(1, &cuda_pixel_resource);

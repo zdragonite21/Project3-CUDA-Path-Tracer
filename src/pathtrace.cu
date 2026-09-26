@@ -191,8 +191,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth,
     }
 }
 
-__global__ void computeIntersections(int depth, int num_paths, PathSegment* pathSegments,
-                                     Geom* geoms, int geoms_size,
+__global__ void computeIntersections(int num_paths, const PathSegment* pathSegments,
+                                     const Geom* geoms, int geoms_size,
                                      ShadeableIntersection* intersections, MatId* isect_matIds) {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -211,7 +211,7 @@ __global__ void computeIntersections(int depth, int num_paths, PathSegment* path
 
         // naive parse through global geoms
         for (int i = 0; i < geoms_size; i++) {
-            Geom& geom = geoms[i];
+            const Geom& geom = geoms[i];
 
             if (geom.type == CUBE) {
                 t = boxIntersectionTest(geom, r, &tmp_intersect, &tmp_normal, &outside);
@@ -249,9 +249,10 @@ __global__ void computeIntersections(int depth, int num_paths, PathSegment* path
 }
 
 __global__ void shadeMaterial(int iter, int num_paths, int depth, int lights_size, int geoms_size,
-                              ShadeableIntersection* shadeableIntersections, MatId* isect_matIds,
-                              PathSegment* pathSegments, Material* materials, Light* lights,
-                              Geom* geoms, glm::vec3* image) {
+                              const ShadeableIntersection* shadeableIntersections,
+                              const MatId* isect_matIds, PathSegment* pathSegments,
+                              const Material* materials, const Light* lights, const Geom* geoms,
+                              glm::vec3* image) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < num_paths && pathSegments[idx].remainingBounces > 0) {
@@ -325,7 +326,7 @@ __global__ void shadeMaterial(int iter, int num_paths, int depth, int lights_siz
  * Lo(p, wo) = Le(p, wo) + 1/n * sum(bsdf(p, wo, wi) * Li(p, wi) * absdot(wi,
  * nor) / pdf(wi))
  */
-void pathtrace(uchar4* pbo, int frame, int iter) {
+void pathtrace(uchar4* pbo, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera& cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -351,7 +352,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         // tracing
         dim3 numblocksPathSegmentTracing = utilityCore::divup(num_paths, blockSize1d);
         computeIntersections<<<numblocksPathSegmentTracing, blockSize1d, 0, pt_stream>>>(
-            depth, num_paths, dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections,
+            num_paths, dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections,
             dev_isect_matIds);
         checkCUDAError("trace one bounce");
         depth++;
