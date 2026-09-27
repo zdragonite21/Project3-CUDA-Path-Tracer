@@ -4,6 +4,7 @@
 #include "intersections.cuh"
 #include "sampling.cuh"
 #include "scene.h"
+#include "scene_structs.h"
 #include "shading.cuh"
 #include "thrust_utils.h"
 #include "utilities.h"
@@ -11,7 +12,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define check_cuda_error(msg) check_cuda_error_fn(msg, FILENAME, __LINE__)
@@ -70,6 +70,7 @@ static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 static Light* dev_lights = NULL;
 static MatId* dev_isect_mat_ids = NULL;
+static ShadowRay* dev_shadow_rays = NULL;
 
 cudaStream_t pt_stream;
 
@@ -92,6 +93,8 @@ void pathtrace_init(Scene* scene) {
     cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
 
     cudaMalloc(&dev_intersections, num_pixels * sizeof(ShadeableIntersection));
+
+    cudaMalloc(&dev_shadow_rays, num_pixels * sizeof(ShadowRay));
 
     cudaMalloc(&dev_isect_mat_ids, num_pixels * sizeof(MatId));
 
@@ -117,6 +120,7 @@ void pathtrace_reset(Scene* scene) {
                cudaMemcpyHostToDevice);
 
     cudaMemset(dev_intersections, 0, num_pixels * sizeof(ShadeableIntersection));
+    cudaMemset(dev_shadow_rays, 0, num_pixels * sizeof(ShadowRay));
     cudaMemset(dev_isect_mat_ids, 0, num_pixels * sizeof(MatId));
 
     check_cuda_error("pathtrace_reset");
@@ -132,6 +136,7 @@ void pathtrace_free() {
     cudaFree(dev_intersections);
     cudaFree(dev_isect_mat_ids);
     cudaFree(dev_lights);
+    cudaFree(dev_shadow_rays);
 
     cudaStreamDestroy(pt_stream);
 
@@ -139,7 +144,7 @@ void pathtrace_free() {
 }
 
 __global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
-                                      PathSegment* path_segments) {
+                                 PathSegment* path_segments) {
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
@@ -188,7 +193,7 @@ void pathtrace(uchar4* pbo, int iter) {
     // 2D block for generating ray from camera
     const dim3 block_size_2d(8, 8);
     const dim3 blocks_per_grid_2d((cam.resolution.x + block_size_2d.x - 1) / block_size_2d.x,
-                               (cam.resolution.y + block_size_2d.y - 1) / block_size_2d.y);
+                                  (cam.resolution.y + block_size_2d.y - 1) / block_size_2d.y);
 
     // 1D block for path tracing
     const int block_size_1d = 128;
@@ -216,9 +221,13 @@ void pathtrace(uchar4* pbo, int iter) {
 #endif
         shade_material<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
             iter, num_paths, depth, hst_scene->lights.size(), hst_scene->geoms.size(),
-            dev_intersections, dev_isect_mat_ids, dev_paths, dev_materials, dev_lights, dev_geoms,
-            dev_image);
+            dev_intersections, dev_isect_mat_ids, dev_paths, dev_shadow_rays, dev_materials,
+            dev_lights, dev_geoms, dev_image);
         check_cuda_error("shader material");
+
+        // compact shadow rays
+        // trace shadow rays
+        check_cuda_error("trace shadow rays");
 
 #if COMPACT_TERMINATED
 #if SORT_PATHS
@@ -240,8 +249,8 @@ void pathtrace(uchar4* pbo, int iter) {
     ///////////////////////////////////////////////////////////////////////////
 
     // Send results to OpenGL buffer for rendering
-    send_image_to_pbo<<<blocks_per_grid_2d, block_size_2d, 0, pt_stream>>>(pbo, cam.resolution, iter,
-                                                                   dev_image);
+    send_image_to_pbo<<<blocks_per_grid_2d, block_size_2d, 0, pt_stream>>>(pbo, cam.resolution,
+                                                                           iter, dev_image);
     check_cuda_error("pathtrace");
 }
 

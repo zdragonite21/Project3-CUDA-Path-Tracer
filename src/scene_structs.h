@@ -129,7 +129,14 @@ struct BsdfSample {
 struct LightSample {
     glm::vec3 wi;
     float dist;
-    glm::vec3 radiance;
     float pdf;
+    int light_idx;
+};
+
+struct ShadowRay {
+    Ray ray;
+    int pixel_index;
+    glm::vec3 throughput;
+    float t_max;
     int light_idx;
 };

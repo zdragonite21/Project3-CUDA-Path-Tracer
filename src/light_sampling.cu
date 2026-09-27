@@ -1,10 +1,8 @@
 #include "light_sampling.cuh"
-
-#include "bxdf_utils.cuh"
 #include "intersections.cuh"
 
 __device__ cstd::optional<LightSample> sample_plane_light(glm::vec3 p, const Geom& plane,
-                                                             RngEng& rng) {
+                                                          RngEng& rng) {
     LightSample sample{};
     UnifDist<float> u01(0, 1);
 
@@ -31,7 +29,7 @@ __device__ cstd::optional<LightSample> sample_plane_light(glm::vec3 p, const Geo
 }
 
 __device__ cstd::optional<LightSample> sample_area_light(glm::vec3 p, const Geom& geom,
-                                                            RngEng& rng) {
+                                                         RngEng& rng) {
     switch (geom.type) {
     case GeomType::Plane:
         return sample_plane_light(p, geom, rng);
@@ -41,8 +39,8 @@ __device__ cstd::optional<LightSample> sample_area_light(glm::vec3 p, const Geom
 }
 
 __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, const Light* lights,
-                                               int num_lights, const Geom* geoms, int num_geoms,
-                                               RngEng& rng) {
+                                                 int num_lights, const Geom* geoms, int num_geoms,
+                                                 RngEng& rng) {
     if (num_lights == 0) {
         return cstd::nullopt;
     }
@@ -52,7 +50,7 @@ __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, con
     const Light& light = lights[light_idx];
 
     cstd::optional<LightSample> sample;
-    
+
     switch (light.type) {
     case LightType::Area:
         sample = sample_area_light(p, geoms[light.geom_id], rng);
@@ -65,13 +63,8 @@ __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, con
         return cstd::nullopt;
     }
 
-    Ray shadow_ray = bx::spawn_ray(p, sample->wi);
-    if (visible_to_light(shadow_ray, light.geom_id, sample->dist, geoms, num_geoms)) {
-        sample->pdf /= num_lights;
-        sample->radiance = light.emission;
-        sample->light_idx = light_idx;
-        return *sample;
-    } else {
-        return cstd::nullopt;
-    }
+    sample->pdf /= num_lights;
+    sample->light_idx = light_idx;
+    
+    return *sample;
 }
