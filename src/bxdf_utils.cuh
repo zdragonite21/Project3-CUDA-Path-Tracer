@@ -1,5 +1,5 @@
-#include <cuda_runtime.h>
-#include <glm/glm.hpp>
+#pragma once
+
 #include "scene_structs.h"
 
 // bxdf utils

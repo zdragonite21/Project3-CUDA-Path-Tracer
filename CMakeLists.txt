@@ -51,8 +51,8 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/image.h
-    src/interactions.h
-    src/intersections.h
+    src/bsdf.cuh
+    src/intersections.cuh
     src/glsl_utility.hpp
     src/pathtrace.h
     src/scene.h
@@ -62,6 +62,8 @@ set(headers
     src/sampling.cuh
     src/bxdf_utils.cuh
     src/light_sampling.cuh
+    src/shading.cuh
+    src/config.h
 )
 
 set(sources
@@ -71,34 +73,35 @@ set(sources
     src/glsl_utility.cpp
     src/pathtrace.cu
     src/intersections.cu
-    src/interactions.cu
+    src/bsdf.cu
     src/thrust_utils.cu
     src/scene.cpp
     src/utilities.cpp
     src/sampling.cu
     src/light_sampling.cu
+    src/shading.cu
 )
 
 set(imgui_headers
-    src/ImGui/imconfig.h
-    src/ImGui/imgui.h
-    src/ImGui/imgui_impl_glfw.h
-    src/ImGui/imgui_impl_opengl3.h
-    src/ImGui/imgui_impl_opengl3_loader.h
-    src/ImGui/imgui_internal.h
-    src/ImGui/imstb_rectpack.h
-    src/ImGui/imstb_textedit.h
-    src/ImGui/imstb_truetype.h
+    external/imgui/ImGui/imconfig.h
+    external/imgui/ImGui/imgui.h
+    external/imgui/ImGui/imgui_impl_glfw.h
+    external/imgui/ImGui/imgui_impl_opengl3.h
+    external/imgui/ImGui/imgui_impl_opengl3_loader.h
+    external/imgui/ImGui/imgui_internal.h
+    external/imgui/ImGui/imstb_rectpack.h
+    external/imgui/ImGui/imstb_textedit.h
+    external/imgui/ImGui/imstb_truetype.h
 )
 
 set(imgui_sources
-    src/ImGui/imgui.cpp
-    src/ImGui/imgui_demo.cpp
-    src/ImGui/imgui_draw.cpp
-    src/ImGui/imgui_impl_glfw.cpp
-    src/ImGui/imgui_impl_opengl3.cpp
-    src/ImGui/imgui_tables.cpp
-    src/ImGui/imgui_widgets.cpp
+    external/imgui/ImGui/imgui.cpp
+    external/imgui/ImGui/imgui_demo.cpp
+    external/imgui/ImGui/imgui_draw.cpp
+    external/imgui/ImGui/imgui_impl_glfw.cpp
+    external/imgui/ImGui/imgui_impl_opengl3.cpp
+    external/imgui/ImGui/imgui_tables.cpp
+    external/imgui/ImGui/imgui_widgets.cpp
 )
 
 list(SORT headers)
@@ -111,10 +114,11 @@ source_group("Sources" FILES ${sources})
 source_group("ImGui\\Headers" FILES ${imgui_headers})
 source_group("ImGui\\Sources" FILES ${imgui_sources})
 
-#add_subdirectory(src/ImGui)
+#add_subdirectory(external/imgui)
 #add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
 
 add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers} ${imgui_sources} ${imgui_headers})
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/external/imgui/ImGui")
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${GL_LIBRARIES}
     CUDA::cudart

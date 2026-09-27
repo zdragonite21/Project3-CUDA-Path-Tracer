@@ -1,9 +1,9 @@
+#include "bsdf.cuh"
 #include "bxdf_utils.cuh"
-#include "interactions.h"
 #include "sampling.cuh"
-#include "scene_structs.h"
 #include "utilities.h"
-#include "light_sampling.cuh"
+
+#include <cmath>
 
 __device__ glm::vec3 fresnel_conductor_eval(float cos_theta_i, const glm::vec3& eta_i,
                                           const glm::vec3& eta_t, const glm::vec3& k) {
@@ -217,19 +217,4 @@ __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 no
         path_segment.ray = bx::spawn_ray(p, s.wi);
         path_segment.remaining_bounces--;
     }
-}
-
-__device__ glm::vec3 estimate_direct_lighting(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
-                          RngEng& rng, const Light* lights, int num_lights, const Geom* geoms,
-                          int num_geoms) {
-    cstd::optional<LightSample> sample = sample_li(p, nor, lights, num_lights, geoms, num_geoms, rng);
-
-    if (!sample || sample->pdf == 0.f) {
-        return glm::vec3(0.f);
-    }
-
-    glm::vec3 bsdf = eval_bsdf(p, nor, -path.ray.dir, sample->wi, m);
-    float lambert = glm::max(0.f, glm::dot(sample->wi, nor));
-
-    return sample->radiance * bsdf * lambert / sample->pdf;
 }

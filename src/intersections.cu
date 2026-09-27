@@ -1,7 +1,6 @@
-#include "intersections.h"
-#include "scene_structs.h"
+#include "intersections.cuh"
+
 #include <cfloat>
-#include <float.h>
 
 __host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* intersection_point,
                                               glm::vec3* normal, bool* outside) {
@@ -160,4 +159,62 @@ __device__ bool visible_to_light(Ray r, int light_geom_idx, float light_dist, co
         }
     }
     return true;
+}
+
+
+__global__ void compute_intersections(int num_paths, const PathSegment* path_segments,
+                                     const Geom* geoms, int num_geoms,
+                                     ShadeableIntersection* intersections, MatId* isect_mat_ids) {
+    int path_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (path_index < num_paths) {
+        Ray r = path_segments[path_index].ray;
+
+        float t;
+        glm::vec3 intersect_point;
+        glm::vec3 normal;
+        float t_min = FLT_MAX;
+        int hit_geom_index = -1;
+        bool outside = true;
+
+        glm::vec3 tmp_intersect;
+        glm::vec3 tmp_normal;
+
+        // naive parse through global geoms
+        for (int i = 0; i < num_geoms; i++) {
+            const Geom& geom = geoms[i];
+
+            if (geom.type == Cube) {
+                t = box_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
+            } else if (geom.type == Sphere) {
+                t = sphere_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
+            } else if (geom.type == Plane) {
+                t = plane_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
+                // only intersect with one side
+                if (outside) {
+                    continue;
+                }
+            }
+
+            // Compute the minimum t from the intersection tests to determine
+            // what scene geometry object was hit first.
+            if (t > 0.0f && t_min > t) {
+                t_min = t;
+                hit_geom_index = i;
+                intersect_point = tmp_intersect;
+                normal = tmp_normal;
+            }
+        }
+
+        if (hit_geom_index == -1) {
+            // hit env map
+            intersections[path_index].t = -1.0f;
+            isect_mat_ids[path_index] = UINT8_MAX;
+        } else {
+            // The ray hits something
+            intersections[path_index].t = t_min;
+            intersections[path_index].surface_normal = normal;
+            isect_mat_ids[path_index] = geoms[hit_geom_index].material_id;
+        }
+    }
 }

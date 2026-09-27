@@ -1,8 +1,7 @@
-#include "bxdf_utils.cuh"
-#include "intersections.h"
 #include "light_sampling.cuh"
-#include "sampling.cuh"
-#include "scene_structs.h"
+
+#include "bxdf_utils.cuh"
+#include "intersections.cuh"
 
 __device__ cstd::optional<LightSample> sample_plane_light(glm::vec3 p, const Geom& plane,
                                                              RngEng& rng) {

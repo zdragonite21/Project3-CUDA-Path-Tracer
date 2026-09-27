@@ -1,7 +1,9 @@
 #pragma once
 
-#include "scene.h"
-#include "utilities.h"
+#include <cuda_runtime.h>
+
+class GuiDataContainer;
+class Scene;
 
 void init_data_container(GuiDataContainer* gui_data);
 void pathtrace_init(Scene* scene);

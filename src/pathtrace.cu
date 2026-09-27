@@ -1,29 +1,17 @@
 #include "pathtrace.h"
 
-#include <cstddef>
-#include <cstdio>
-#include <cuda.h>
-#include <cuda_device_runtime_api.h>
-#include <cuda_runtime.h>
-#include <cuda_runtime_api.h>
-
-#include "interactions.h"
-#include "intersections.h"
+#include "config.h"
+#include "intersections.cuh"
 #include "sampling.cuh"
 #include "scene.h"
-#include "scene_structs.h"
+#include "shading.cuh"
 #include "thrust_utils.h"
 #include "utilities.h"
 
-#define ERRORCHECK 0
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
-#define SORT_PATHS 1
-#define COMPACT_TERMINATED 1
-
-#define RUSSIAN_ROULETTE 1
-
-#define LI_NEE 1
-#define LI_DIRECT 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define check_cuda_error(msg) check_cuda_error_fn(msg, FILENAME, __LINE__)
@@ -45,11 +33,6 @@ void check_cuda_error_fn(const char* msg, const char* file, int line) {
 #endif // _WIN32
     exit(EXIT_FAILURE);
 #endif // ERRORCHECK
-}
-
-__host__ __device__ RngEng make_seeded_rng(int iter, int index, int depth) {
-    int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
-    return RngEng(h);
 }
 
 // Kernel that writes the image to the OpenGL PBO directly.
@@ -188,135 +171,6 @@ __global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
         segment.throughput = glm::vec3(1.0f, 1.0f, 1.0f);
         segment.pixel_index = index;
         segment.remaining_bounces = trace_depth;
-    }
-}
-
-__global__ void compute_intersections(int num_paths, const PathSegment* path_segments,
-                                     const Geom* geoms, int num_geoms,
-                                     ShadeableIntersection* intersections, MatId* isect_mat_ids) {
-    int path_index = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (path_index < num_paths) {
-        Ray r = path_segments[path_index].ray;
-
-        float t;
-        glm::vec3 intersect_point;
-        glm::vec3 normal;
-        float t_min = FLT_MAX;
-        int hit_geom_index = -1;
-        bool outside = true;
-
-        glm::vec3 tmp_intersect;
-        glm::vec3 tmp_normal;
-
-        // naive parse through global geoms
-        for (int i = 0; i < num_geoms; i++) {
-            const Geom& geom = geoms[i];
-
-            if (geom.type == Cube) {
-                t = box_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
-            } else if (geom.type == Sphere) {
-                t = sphere_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
-            } else if (geom.type == Plane) {
-                t = plane_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
-                // only intersect with one side
-                if (outside) {
-                    continue;
-                }
-            }
-
-            // Compute the minimum t from the intersection tests to determine
-            // what scene geometry object was hit first.
-            if (t > 0.0f && t_min > t) {
-                t_min = t;
-                hit_geom_index = i;
-                intersect_point = tmp_intersect;
-                normal = tmp_normal;
-            }
-        }
-
-        if (hit_geom_index == -1) {
-            // hit env map
-            intersections[path_index].t = -1.0f;
-            isect_mat_ids[path_index] = UINT8_MAX;
-        } else {
-            // The ray hits something
-            intersections[path_index].t = t_min;
-            intersections[path_index].surface_normal = normal;
-            isect_mat_ids[path_index] = geoms[hit_geom_index].material_id;
-        }
-    }
-}
-
-__global__ void shade_material(int iter, int num_paths, int depth, int num_lights, int num_geoms,
-                              const ShadeableIntersection* shadeable_intersections,
-                              const MatId* isect_mat_ids, PathSegment* path_segments,
-                              const Material* materials, const Light* lights, const Geom* geoms,
-                              glm::vec3* image) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx < num_paths && path_segments[idx].remaining_bounces > 0) {
-        PathSegment path = path_segments[idx];
-        MatId mat_id = isect_mat_ids[idx];
-
-        if (mat_id == UINT8_MAX) {
-            // hit env map
-            path.throughput = glm::vec3(0.0f);
-            path.remaining_bounces = 0;
-            path_segments[idx] = path;
-            return;
-        }
-
-        glm::vec3 radiance(0);
-        ShadeableIntersection intersection = shadeable_intersections[idx];
-        RngEng rng = make_seeded_rng(iter, idx, depth);
-        Material material = materials[mat_id];
-        glm::vec3 material_color = material.color;
-
-        if (material.type == MatType::Emissive) {
-            radiance += path.throughput * material.emission;
-            path.remaining_bounces = 0;
-        } else {
-#if LI_NEE
-            glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
-            glm::vec3 nor = intersection.surface_normal;
-            if (material.type == MatType::Diffuse) {
-                // if not delta (so change this when I add microfacet)
-                glm::vec3 direct =
-                    estimate_direct_lighting(path, p, nor, material, rng, lights, num_lights, geoms, num_geoms);
-                radiance += path.throughput * direct;
-            }
-            scatter_ray(path, p, nor, material, rng);
-
-#elif LI_DIRECT
-            glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
-            glm::vec3 direct = estimate_direct_lighting(path, p, intersection.surface_normal, material, rng, lights,
-                                         num_lights, geoms, num_geoms);
-            radiance += direct;
-            path.remaining_bounces = 0;
-#else
-            glm::vec3 intersect = get_point_on_ray(path.ray, intersection.t);
-            scatter_ray(path, intersect, intersection.surface_normal, material, rng);
-#endif
-        }
-
-#if RUSSIAN_ROULETTE
-        if (depth > 3 && path.remaining_bounces > 0) {
-            UnifDist<float> u01(0, 1);
-
-            float survive_p = max(path.throughput.x, max(path.throughput.y, path.throughput.z));
-            survive_p = glm::clamp(survive_p, 0.05f, 0.95f);
-            if (u01(rng) > survive_p) {
-                path.throughput = glm::vec3(0);
-                path.remaining_bounces = 0;
-            } else {
-                path.throughput /= survive_p;
-            }
-        }
-#endif
-        path_segments[idx] = path;
-        // final gather
-        image[path.pixel_index] += radiance;
     }
 }
 

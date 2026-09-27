@@ -1,9 +1,7 @@
 #pragma once
 
 #include "scene_structs.h"
-
 #include <glm/glm.hpp>
-
 #include "thrust_utils.h"
 
 /**
@@ -36,7 +34,3 @@ __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 intersect, glm:
 
 __device__ glm::vec3 eval_bsdf(glm::vec3 p, glm::vec3 nor, glm::vec3 wo_w, glm::vec3 wi_w,
                               const Material& m);
-
-__device__ glm::vec3 estimate_direct_lighting(PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
-                          RngEng& rng, const Light* lights, int num_lights, const Geom* geoms,
-                          int num_geoms);
