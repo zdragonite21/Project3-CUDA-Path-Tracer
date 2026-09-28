@@ -1,5 +1,6 @@
 #include "intersections.cuh"
 #include "light_sampling.cuh"
+#include "sampling.cuh"
 #include <glm/gtx/norm.hpp>
 
 __device__ float area_to_solid_angle_pdf(float pdf_area, float dist2, float cos_light) {
@@ -55,12 +56,30 @@ __device__ float pdf_plane_light(Ray r, const Geom& plane) {
     return area_to_solid_angle_pdf(1.f / surface_area, dist2, cos_light);
 }
 
+__device__ float pdf_env_light(glm::vec3 wi) {
+    return square_to_sphere_uniform_pdf(wi);
+}
+
+__device__ LightSample sample_env_light(RngEng& rng) {
+    UnifDist<float> u01(0.0f, 1.0f);
+
+    glm::vec2 xi(u01(rng), u01(rng));
+
+    LightSample sample{};
+    sample.wi = square_to_sphere_uniform(xi);
+    sample.pdf = pdf_env_light(sample.wi);
+    sample.dist = FLT_MAX;
+
+    return sample;
+}
+
 __device__ float pdf_li(const Ray& r, const Light& light, const Geom* geoms, int num_geoms) {
     switch (light.type) {
     case LightType::Area:
         return pdf_plane_light(r, geoms[light.geom_id]);
     case LightType::Environment:
-        // not supported yet
+        return pdf_env_light(r.dir);
+    default:
         return 0.f;
     }
 }
@@ -79,8 +98,7 @@ __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, con
         }
     }
     case LightType::Environment:
-        // not supported yet
-        return cstd::nullopt;
+        return sample_env_light(rng);
     default:
         return cstd::nullopt;
     }
@@ -97,6 +115,8 @@ __device__ cstd::optional<LightSample> sample_direct_light(glm::vec3 p, glm::vec
     UnifDist<float> u01(0, 1);
 
     int light_idx = static_cast<int>(u01(rng) * num_lights);
+    light_idx = glm::min(light_idx, num_lights - 1);
+    
     const Light& light = lights[light_idx];
 
     cstd::optional<LightSample> sample = sample_li(p, nor, light, geoms, num_geoms, rng);

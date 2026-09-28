@@ -86,6 +86,7 @@ struct RenderState {
 struct DeviceEnvMap {
     cudaTextureObject_t texture = 0;
     float strength = 1.f;
+    int light_idx = -1;
 };
 
 struct PathSegment {

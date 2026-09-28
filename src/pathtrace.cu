@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cuda_runtime_api.h>
 #include <driver_types.h>
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -100,6 +101,7 @@ void pathtrace_init(Scene* scene) {
         cudaCreateTextureObject(&device_env.texture, &resource, &sampler, nullptr);
 
         device_env.strength = scene->env.strength;
+        device_env.light_idx = scene->env.light_idx;
     }
 
     check_cuda_error("pathtrace_init");
@@ -139,6 +141,8 @@ void pathtrace_free() {
     cudaFree(dev_isect_mat_ids);
     cudaFree(dev_lights);
     cudaFree(dev_shadow_rays);
+
+    cudaDestroyTextureObject(device_env.texture);
     cudaFreeArray(env_array);
 
     cudaStreamDestroy(pt_stream);
@@ -155,7 +159,7 @@ __global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
         int index = x + (y * cam.resolution.x);
         PathSegment& segment = path_segments[index];
 
-        RngEng rng = make_seeded_rng(iter, index, 0);
+        RngEng rng = make_seeded_rng(iter, index, -1);
         UnifDist<float> u01(0, 1);
 
         glm::vec2 offset = glm::vec2(u01(rng), u01(rng));
@@ -179,6 +183,8 @@ __global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
         segment.throughput = glm::vec3(1.0f, 1.0f, 1.0f);
         segment.pixel_index = index;
         segment.remaining_bounces = trace_depth;
+        segment.prev_bsdf_pdf = 0.f;
+        segment.prev_was_delta = false;
     }
 }
 

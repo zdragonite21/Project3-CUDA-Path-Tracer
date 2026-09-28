@@ -60,7 +60,7 @@ __device__ glm::vec3 square_to_disk_concentric(glm::vec2 xi) {
 
 __device__ glm::vec3 square_to_hemisphere_cosine(glm::vec2 xi) {
     glm::vec3 disk = square_to_disk_concentric(xi);
-    return glm::vec3(disk.x, disk.y, sqrt(1 - disk.x * disk.x - disk.y * disk.y));
+    return glm::vec3(disk.x, disk.y, sqrt(glm::max(1 - disk.x * disk.x - disk.y * disk.y, 0.f)));
 }
 
 __device__ float square_to_hemisphere_cosine_pdf(glm::vec3 s) {

@@ -91,7 +91,8 @@ __device__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm::vec3 wo, const 
         // sample perfect specular reflection
         sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
         sample.pdf = r / (r + t);
-        sample.f = glm::vec3(r) / glm::abs(bx::cos_theta(sample.wi));
+        float lambert = glm::abs(bx::cos_theta(sample.wi));
+        sample.f = lambert > 0.f ? glm::vec3(r) / lambert : glm::vec3(0);
         sample.type = BxdfFlag::Reflection;
     } else {
         // sample perfect specular transmission
@@ -125,7 +126,8 @@ __device__ BsdfSample sample_smooth_conductor(glm::vec3 p, glm::vec3 wo, const M
     sample.pdf = 1.f;
     // eta_i for air is 1
     glm::vec3 fr = fresnel_conductor_eval(bx::cos_theta(sample.wi), glm::vec3(1), m.eta, m.k);
-    sample.f = fr / glm::abs(bx::cos_theta(sample.wi));
+    float lambert = glm::abs(bx::cos_theta(sample.wi));
+    sample.f = lambert > 0.f ? glm::vec3(fr) / lambert : glm::vec3(0);
     sample.type = BxdfFlag::Reflection | BxdfFlag::Specular;
 
     return sample;

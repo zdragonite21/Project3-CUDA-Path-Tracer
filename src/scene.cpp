@@ -31,7 +31,7 @@ Scene::Scene(string filename) {
     }
 }
 
-void Scene::load_hdri(const std::string& json_name, const std::string& image_name, float strength) {
+void Scene::load_hdri_pixels(const std::string& json_name, const std::string& image_name) {
     const std::filesystem::path scene_path = std::filesystem::absolute(json_name);
     const std::filesystem::path image_path =
         (scene_path.parent_path() / image_name).lexically_normal();
@@ -47,8 +47,6 @@ void Scene::load_hdri(const std::string& json_name, const std::string& image_nam
         throw std::runtime_error("failed to load hdir " + filename + "\n" +
                                  (reason ? reason : "unknown error"));
     }
-
-    env.strength = strength;
 
     const size_t pixel_count = static_cast<size_t>(env.width) * static_cast<size_t>(env.height);
     env.pixels.resize(pixel_count);
@@ -71,10 +69,11 @@ void Scene::load_from_json(const std::string& json_name) {
         if (p["TYPE"] == "Environment") {
             new_light.geom_id = -1;
             new_light.type = LightType::Environment;
-            load_hdri(json_name, p["PATH"], p["STRENGTH"]);
+            load_hdri_pixels(json_name, p["PATH"]);
+            env.strength = p["STRENGTH"];
+            env.light_idx = lights.size();
+            lights.push_back(new_light);
         }
-        // TODO
-        // lights.push_back(new_light);
     }
 
     const auto& materials_data = data["Materials"];

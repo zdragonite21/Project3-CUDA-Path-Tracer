@@ -10,12 +10,12 @@
         "light_blue": {
             "TYPE": "Emitting",
             "EMISSION": [0.6, 1.0, 0.6],
-            "STRENGTH": 10.0
+            "STRENGTH": 8.0
         },
         "light_red": {
             "TYPE": "Emitting",
             "EMISSION": [1.0, 0.8, 0.6],
-            "STRENGTH": 15.0
+            "STRENGTH": 12.0
         },
         "diffuse_white": {
             "TYPE": "Diffuse",

@@ -40,17 +40,21 @@ __device__ glm::vec3 eval_environment(const DeviceEnvMap& env, glm::vec3 wi) {
     return env.strength * glm::vec3(rgb.x, rgb.y, rgb.z);
 }
 
-__device__ cstd::optional<ShadowRay> estimate_direct_lighting(const PathSegment& path, glm::vec3 p,
-                                                              glm::vec3 nor, const Material& m,
-                                                              RngEng& rng, const Light* lights,
-                                                              int num_lights, const Geom* geoms,
-                                                              int num_geoms) {
+__device__ cstd::optional<ShadowRay>
+estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
+                         RngEng& rng, const Light* lights, int num_lights, const Geom* geoms,
+                         int num_geoms, const DeviceEnvMap& env) {
     cstd::optional<LightSample> ls =
         sample_direct_light(p, nor, lights, num_lights, geoms, num_geoms, rng);
 
     if (!ls || ls->pdf == 0.f) {
         return cstd::nullopt;
     }
+
+    const Light& light = lights[ls->light_idx];
+
+    glm::vec3 li =
+        light.type == LightType::Environment ? eval_environment(env, ls->wi) : light.emission;
 
     glm::vec3 bsdf_f = eval_bsdf(p, nor, -path.ray.dir, ls->wi, m);
     float bsdf_p = pdf_bsdf(p, nor, -path.ray.dir, ls->wi, m);
@@ -61,11 +65,10 @@ __device__ cstd::optional<ShadowRay> estimate_direct_lighting(const PathSegment&
     sray.ray = bx::spawn_ray(p, ls->wi);
     sray.pixel_index = path.pixel_index;
     // so we don't intersect with the same light when tracing shadow rays
-    sray.t_max = ls->dist - 0.001f;
+    sray.t_max = light.type == LightType::Environment ? FLT_MAX : ls->dist - 0.001f;
 
     float lambert = glm::max(0.f, glm::dot(ls->wi, nor));
-    sray.contribution =
-        path.throughput * lights[ls->light_idx].emission * bsdf_f * lambert * w / ls->pdf;
+    sray.contribution = path.throughput * li * bsdf_f * lambert * w / ls->pdf;
 
     return sray;
 }
@@ -110,7 +113,17 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     PathSegment path = path_segments[idx];
     MatId mat_id = isect_mat_ids[idx];
     if (mat_id == UINT8_MAX) {
-        image[path.pixel_index] += path.throughput * eval_environment(env, path.ray.dir);
+        glm::vec3 le = eval_environment(env, path.ray.dir);
+        float w = 1.f;
+        
+#if LI_MIS
+        if (depth > 0 && !path.prev_was_delta && env.light_idx >= 0) {
+            float li_pdf = pdf_li(path.ray, lights[env.light_idx], geoms, num_geoms) /
+                           static_cast<float>(num_lights);
+            w = power_heuristic(path.prev_bsdf_pdf, li_pdf);
+        }
+#endif
+        image[path.pixel_index] += path.throughput * le * w;
         terminate_path(path_segments[idx]);
         return;
     }
@@ -127,7 +140,7 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
             // light sampling
             float li_pdf =
                 pdf_li(path.ray, lights[shadeable_intersections[idx].light_idx], geoms, num_geoms) /
-                num_lights;
+                static_cast<float>(num_lights);
 
             float w = power_heuristic(path.prev_bsdf_pdf, li_pdf);
             image[path.pixel_index] += w * path.throughput * material.emission;
@@ -151,7 +164,7 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     if (is_not_specular(material)) {
         // if not delta (so change this when I add microfacet)
         cstd::optional<ShadowRay> sray = estimate_direct_lighting(
-            path, p, nor, material, rng, lights, num_lights, geoms, num_geoms);
+            path, p, nor, material, rng, lights, num_lights, geoms, num_geoms, env);
 
         if (sray) {
             shadow_rays[idx] = *sray;
