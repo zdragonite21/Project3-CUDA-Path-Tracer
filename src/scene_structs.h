@@ -44,8 +44,6 @@ struct Light {
     glm::vec3 emission;
     int geom_id;
     
-    float env_strength;
-
     LightType type;
 };
 

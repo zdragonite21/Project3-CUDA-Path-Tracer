@@ -2,7 +2,8 @@
     "Lights": {
         "env": {
             "TYPE": "Environment",
-            "STRENGTH": 1.0
+            "STRENGTH": 1.0,
+            "PATH": "../assets/hdri/brown_photostudio_02_4k.hdr"
         }
     },
     "Materials": {

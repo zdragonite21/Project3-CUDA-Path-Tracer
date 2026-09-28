@@ -81,6 +81,8 @@ __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, con
     case LightType::Environment:
         // not supported yet
         return cstd::nullopt;
+    default:
+        return cstd::nullopt;
     }
 }
 
