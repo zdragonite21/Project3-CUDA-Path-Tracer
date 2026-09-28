@@ -29,6 +29,7 @@ struct Transform {
 struct Geom {
     enum GeomType type;
     int material_id;
+    int light_idx;
 
     Transform transform;
 };
@@ -87,6 +88,8 @@ struct PathSegment {
     glm::vec3 throughput;
     int pixel_index;
     int remaining_bounces;
+    float prev_bsdf_pdf;
+    bool prev_was_delta;
 };
 
 // Use with a corresponding PathSegment to do:
@@ -95,6 +98,7 @@ struct PathSegment {
 struct ShadeableIntersection {
     glm::vec3 surface_normal;
     float t;
+    int light_idx;
 };
 
 enum class BxdfFlag : uint8_t {
@@ -136,7 +140,6 @@ struct LightSample {
 struct ShadowRay {
     Ray ray;
     int pixel_index;
-    glm::vec3 throughput;
+    glm::vec3 contribution;
     float t_max;
-    int light_idx;
 };

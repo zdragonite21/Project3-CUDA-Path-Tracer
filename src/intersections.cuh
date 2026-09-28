@@ -44,7 +44,7 @@ __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r, gl
 __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r, glm::vec3* isect_point,
                                                 glm::vec3* normal, bool* outside);
 
-__device__ bool visible_to_light(Ray r, int light_geom_idx, float light_dist, const Geom* geoms, int num_geoms);
+__device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int num_geoms);
 
 __global__ void compute_intersections(int num_paths, const PathSegment* path_segments,
                                      const Geom* geoms, int num_geoms,

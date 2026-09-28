@@ -1,5 +1,11 @@
-#include "light_sampling.cuh"
+#include "bxdf_utils.cuh"
 #include "intersections.cuh"
+#include "light_sampling.cuh"
+#include <glm/gtx/norm.hpp>
+
+__device__ float area_to_solid_angle_pdf(float pdf_area, float dist2, float cos_light) {
+    return dist2 * pdf_area / cos_light;
+}
 
 __device__ cstd::optional<LightSample> sample_plane_light(glm::vec3 p, const Geom& plane,
                                                           RngEng& rng) {
@@ -28,6 +34,28 @@ __device__ cstd::optional<LightSample> sample_plane_light(glm::vec3 p, const Geo
     return sample;
 }
 
+__device__ float pdf_plane_light(Ray r, const Geom& plane) {
+    // for mis, assume ray hits light properly
+    glm::vec3 hit_pt;
+    bool outside;
+    float t = plane_intersection_test(plane, r, &hit_pt, nullptr, &outside);
+
+    if (t <= 0.f || outside) {
+        return 0.f;
+    }
+
+    glm::vec3 light_normal =
+        glm::normalize(multiply_mv(plane.transform.inv_transpose, glm::vec4(0, 1, 0, 0)));
+
+    float surface_area = plane.transform.scale.x * plane.transform.scale.z;
+    float dist2 = glm::length2(hit_pt - r.org);
+    float cos_light = glm::dot(-r.dir, light_normal);
+    if (cos_light <= 0.0001) {
+        return 0.f;
+    }
+    return area_to_solid_angle_pdf(1.f / surface_area, dist2, cos_light);
+}
+
 __device__ cstd::optional<LightSample> sample_area_light(glm::vec3 p, const Geom& geom,
                                                          RngEng& rng) {
     switch (geom.type) {
@@ -38,9 +66,47 @@ __device__ cstd::optional<LightSample> sample_area_light(glm::vec3 p, const Geom
     }
 }
 
-__device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, const Light* lights,
-                                                 int num_lights, const Geom* geoms, int num_geoms,
-                                                 RngEng& rng) {
+__device__ float pdf_li(const Ray &r, const Light& light, const Geom* geoms,
+                        int num_geoms) {
+    switch (light.type) {
+    case LightType::Area:
+        return pdf_plane_light(r, geoms[light.geom_id]);
+    case LightType::Environment:
+        // not supported yet
+        return 0.f;
+    }
+}
+
+// __device__ glm::vec3 eval_li(glm::vec3 p, glm::vec3 wi, const Light& light, const Geom* geoms,
+//                          int num_geoms) {
+//     Ray r = bx::spawn_ray(p, wi);
+
+//     switch (light.type) {
+//     case LightType::Area:
+//         return pdf_plane_light(r, geoms[light.geom_id]);
+//     case LightType::Environment:
+//         // not supported yet
+//         return 0.f;
+//     }
+// }
+
+// sample one light
+__device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, const Light& light,
+                                                 const Geom* geoms, int num_geoms, RngEng& rng) {
+    switch (light.type) {
+    case LightType::Area:
+        return sample_area_light(p, geoms[light.geom_id], rng);
+    case LightType::Environment:
+        // not supported yet
+        return cstd::nullopt;
+    }
+}
+
+// choose a light to sample
+__device__ cstd::optional<LightSample> sample_direct_light(glm::vec3 p, glm::vec3 nor,
+                                                           const Light* lights, int num_lights,
+                                                           const Geom* geoms, int num_geoms,
+                                                           RngEng& rng) {
     if (num_lights == 0) {
         return cstd::nullopt;
     }
@@ -49,22 +115,14 @@ __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, con
     int light_idx = static_cast<int>(u01(rng) * num_lights);
     const Light& light = lights[light_idx];
 
-    cstd::optional<LightSample> sample;
+    cstd::optional<LightSample> sample = sample_li(p, nor, light, geoms, num_geoms, rng);
 
-    switch (light.type) {
-    case LightType::Area:
-        sample = sample_area_light(p, geoms[light.geom_id], rng);
-        break;
-    case LightType::Environment:
-        // not supported yet
-        return cstd::nullopt;
-    }
     if (!sample || glm::dot(sample->wi, nor) <= 0.f) {
         return cstd::nullopt;
     }
 
     sample->pdf /= num_lights;
     sample->light_idx = light_idx;
-    
-    return *sample;
+
+    return sample;
 }

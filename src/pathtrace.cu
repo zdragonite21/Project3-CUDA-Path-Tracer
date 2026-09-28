@@ -206,15 +206,13 @@ void pathtrace(uchar4* pbo, int iter) {
     PathSegment* dev_path_end = dev_paths + num_pixels;
     int num_paths = dev_path_end - dev_paths;
 
-    bool iteration_complete = false;
-    while (!iteration_complete && depth < trace_depth) {
+    while (num_paths > 0 && depth < trace_depth) {
         // tracing
         dim3 num_blocks_path_segment_tracing = utility_core::divup(num_paths, block_size_1d);
         compute_intersections<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
             num_paths, dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections,
             dev_isect_mat_ids);
         check_cuda_error("trace one bounce");
-        depth++;
 
 #if SORT_PATHS
         sort_paths(num_paths, dev_intersections, dev_isect_mat_ids, dev_paths, pt_stream);
@@ -225,8 +223,10 @@ void pathtrace(uchar4* pbo, int iter) {
             dev_lights, dev_geoms, dev_image);
         check_cuda_error("shader material");
 
-        // compact shadow rays
-        // trace shadow rays
+        int num_srays = num_paths;
+        dim3 num_blocks_srays = utility_core::divup(num_srays, block_size_1d);
+        trace_shadow_rays<<<num_blocks_srays, block_size_1d, 0, pt_stream>>>(
+            num_srays, hst_scene->geoms.size(), dev_shadow_rays, dev_geoms, dev_image);
         check_cuda_error("trace shadow rays");
 
 #if COMPACT_TERMINATED
@@ -237,13 +237,11 @@ void pathtrace(uchar4* pbo, int iter) {
         // compact the remaning terminated paths
         num_paths = compact_terminated(num_paths, dev_paths, pt_stream);
 #endif
-        if (num_paths < 1) {
-            iteration_complete = true;
-        }
 
         if (gui_data != NULL) {
             gui_data->traced_depth = depth;
         }
+        depth++;
     }
 
     ///////////////////////////////////////////////////////////////////////////

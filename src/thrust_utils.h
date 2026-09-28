@@ -13,3 +13,5 @@ void sort_paths(int num_paths, ShadeableIntersection *isects, MatId *mat_ids,
 int filter_missed(int num_paths, MatId *mat_ids, cudaStream_t stream);
 
 int compact_terminated(int num_paths, PathSegment* paths, cudaStream_t stream);
+
+int compact_shadow_rays(int num_paths, ShadowRay* srays, cudaStream_t stream);

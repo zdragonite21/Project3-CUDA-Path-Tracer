@@ -2,8 +2,9 @@
 
 #include <cfloat>
 
-__host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec3* intersection_point,
-                                              glm::vec3* normal, bool* outside) {
+__host__ __device__ float box_intersection_test(const Geom& box, Ray r,
+                                                glm::vec3* intersection_point, glm::vec3* normal,
+                                                bool* outside) {
 
     glm::vec3 ro = multiply_mv(box.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(box.transform.inverse, glm::vec4(r.dir, 0.0f));
@@ -60,8 +61,8 @@ __host__ __device__ float box_intersection_test(const Geom& box, Ray r, glm::vec
 }
 
 __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
-                                                 glm::vec3* intersection_point, glm::vec3* normal,
-                                                 bool* outside) {
+                                                   glm::vec3* intersection_point, glm::vec3* normal,
+                                                   bool* outside) {
     glm::vec3 ro = multiply_mv(sphere.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(sphere.transform.inverse, glm::vec4(r.dir, 0.0f));
 
@@ -101,8 +102,8 @@ __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
 }
 
 __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
-                                                glm::vec3* intersection_point, glm::vec3* normal,
-                                                bool* back_facing) {
+                                                  glm::vec3* intersection_point, glm::vec3* normal,
+                                                  bool* back_facing) {
 
     glm::vec3 ro = multiply_mv(plane.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(plane.transform.inverse, glm::vec4(r.dir, 0.0f));
@@ -134,14 +135,11 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     return t;
 }
 
-__device__ bool visible_to_light(Ray r, int light_geom_idx, float light_dist, const Geom* geoms, int num_geoms) {
+__device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int num_geoms) {
     float min_t = light_dist;
     float t;
 
     for (int i = 0; i < num_geoms; ++i) {
-        if (i == light_geom_idx) {
-            continue;
-        }
         const Geom& geom = geoms[i];
         switch (geom.type) {
         case GeomType::Cube:
@@ -161,23 +159,20 @@ __device__ bool visible_to_light(Ray r, int light_geom_idx, float light_dist, co
     return true;
 }
 
-
 __global__ void compute_intersections(int num_paths, const PathSegment* path_segments,
-                                     const Geom* geoms, int num_geoms,
-                                     ShadeableIntersection* intersections, MatId* isect_mat_ids) {
+                                      const Geom* geoms, int num_geoms,
+                                      ShadeableIntersection* intersections, MatId* isect_mat_ids) {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (path_index < num_paths) {
         Ray r = path_segments[path_index].ray;
 
         float t;
-        glm::vec3 intersect_point;
         glm::vec3 normal;
         float t_min = FLT_MAX;
         int hit_geom_index = -1;
         bool outside = true;
 
-        glm::vec3 tmp_intersect;
         glm::vec3 tmp_normal;
 
         // naive parse through global geoms
@@ -185,11 +180,11 @@ __global__ void compute_intersections(int num_paths, const PathSegment* path_seg
             const Geom& geom = geoms[i];
 
             if (geom.type == Cube) {
-                t = box_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
+                t = box_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
             } else if (geom.type == Sphere) {
-                t = sphere_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
+                t = sphere_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
             } else if (geom.type == Plane) {
-                t = plane_intersection_test(geom, r, &tmp_intersect, &tmp_normal, &outside);
+                t = plane_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
                 // only intersect with one side
                 if (outside) {
                     continue;
@@ -201,7 +196,6 @@ __global__ void compute_intersections(int num_paths, const PathSegment* path_seg
             if (t > 0.0f && t_min > t) {
                 t_min = t;
                 hit_geom_index = i;
-                intersect_point = tmp_intersect;
                 normal = tmp_normal;
             }
         }
@@ -214,6 +208,7 @@ __global__ void compute_intersections(int num_paths, const PathSegment* path_seg
             // The ray hits something
             intersections[path_index].t = t_min;
             intersections[path_index].surface_normal = normal;
+            intersections[path_index].light_idx = geoms[hit_geom_index].light_idx;
             isect_mat_ids[path_index] = geoms[hit_geom_index].material_id;
         }
     }

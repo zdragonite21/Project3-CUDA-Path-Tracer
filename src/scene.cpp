@@ -91,6 +91,7 @@ void Scene::load_from_json(const std::string &json_name) {
             new_light.geom_id = geoms.size();
             new_light.type = LightType::Area;
             new_light.emission = materials[new_geom.material_id].emission;
+            new_geom.light_idx = lights.size();
             lights.push_back(new_light);
         }
         Transform new_trans;

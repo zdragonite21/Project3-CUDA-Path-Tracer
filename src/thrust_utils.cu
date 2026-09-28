@@ -1,3 +1,4 @@
+#include "scene_structs.h"
 #include "thrust_utils.h"
 
 #include <thrust/binary_search.h>
@@ -10,15 +11,21 @@ struct IsPathTerminated {
     }
 };
 
+struct IsShadowRayInvalid    {
+    __host__ __device__ bool operator()(const ShadowRay& sray) const {
+        return sray.pixel_index == -1;
+    }
+};
+
 struct IsIsectHit {
-    template <typename Tuple>
-    __device__ bool operator()(const Tuple& t) const {
+    template <typename Tuple> __device__ bool operator()(const Tuple& t) const {
         const MatId mat_id = thrust::get<2>(t);
         return mat_id < UINT8_MAX;
     }
 };
 
-void sort_paths(int num_paths, ShadeableIntersection* isects, MatId* mat_ids, PathSegment* paths, cudaStream_t stream) {
+void sort_paths(int num_paths, ShadeableIntersection* isects, MatId* mat_ids, PathSegment* paths,
+                cudaStream_t stream) {
     auto policy = thrust::cuda::par_nosync.on(stream);
     auto zip_begin = thrust::make_zip_iterator(thrust::make_tuple(isects, paths));
     thrust::sort_by_key(policy, mat_ids, mat_ids + num_paths, zip_begin);
@@ -34,4 +41,10 @@ int compact_terminated(int num_paths, PathSegment* paths, cudaStream_t stream) {
     auto policy = thrust::cuda::par_nosync.on(stream);
     auto new_end = thrust::remove_if(policy, paths, paths + num_paths, IsPathTerminated{});
     return new_end - paths;
+}
+
+int compact_shadow_rays(int num_paths, ShadowRay* srays, cudaStream_t stream) {
+    auto policy = thrust::cuda::par_nosync.on(stream);
+    auto new_end = thrust::remove_if(policy, srays, srays + num_paths, IsShadowRayInvalid{});
+    return new_end - srays;
 }
