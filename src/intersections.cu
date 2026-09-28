@@ -1,4 +1,5 @@
 #include "intersections.cuh"
+#include "scene_structs.h"
 
 #include <cfloat>
 
@@ -135,6 +136,15 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     return t;
 }
 
+__host__ __device__ float sdf_intersection_test(const Geom& sdf, Ray r,
+                                                glm::vec3* intersection_point, glm::vec3* normal,
+                                                bool* back_facing) {
+    // sphere trace
+    // compute normal
+
+    return 0.f;
+}
+
 __device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int num_geoms) {
     float min_t = light_dist;
     float t;
@@ -151,6 +161,8 @@ __device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int
         case GeomType::Sphere:
             t = sphere_intersection_test(geom, r, nullptr, nullptr, nullptr);
             break;
+        case GeomType::Sdf:
+            t = sdf_intersection_test(geom, r, nullptr, nullptr, nullptr);
         }
         if (t > 0 && t < min_t) {
             return false;
@@ -179,16 +191,23 @@ __global__ void compute_intersections(int num_paths, const PathSegment* path_seg
         for (int i = 0; i < num_geoms; i++) {
             const Geom& geom = geoms[i];
 
-            if (geom.type == Cube) {
+            switch (geom.type) {
+            case Cube:
                 t = box_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
-            } else if (geom.type == Sphere) {
+                break;
+            case Sphere:
                 t = sphere_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
-            } else if (geom.type == Plane) {
+                break;
+            case Plane:
                 t = plane_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
                 // only intersect with one side
                 if (outside) {
                     continue;
                 }
+                break;
+            case Sdf:
+                t = sdf_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
+                break;
             }
 
             // Compute the minimum t from the intersection tests to determine

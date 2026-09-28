@@ -9,7 +9,7 @@
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
 #include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"

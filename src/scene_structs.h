@@ -10,7 +10,7 @@
 
 using MatId = uint8_t;
 
-enum GeomType { Sphere, Cube, Plane };
+enum GeomType { Sphere, Cube, Plane, Sdf };
 
 struct Ray {
     glm::vec3 org;

@@ -3,7 +3,7 @@
     "cmake.buildDirectory": "${workspaceFolder}/build/ninja",
     "cmake.debugConfig": {
         "args": [
-            "scenes/cornell.json"
+            "scenes/fractal.json"
         ],
         "cwd": "${workspaceFolder}"
     },

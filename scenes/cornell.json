@@ -3,7 +3,7 @@
         "env": {
             "TYPE": "Environment",
             "STRENGTH": 1.0,
-            "PATH": "../assets/hdri/brown_photostudio_02_4k.hdr"
+            "PATH": "../assets/hdri/HDR_white_dwarf_star.hdr"
         }
     },
     "Materials": {

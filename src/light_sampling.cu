@@ -1,7 +1,6 @@
 #include "intersections.cuh"
 #include "light_sampling.cuh"
 #include "sampling.cuh"
-#include <glm/gtx/norm.hpp>
 
 __device__ float area_to_solid_angle_pdf(float pdf_area, float dist2, float cos_light) {
     return dist2 * pdf_area / cos_light;
@@ -48,7 +47,7 @@ __device__ float pdf_plane_light(Ray r, const Geom& plane) {
         glm::normalize(multiply_mv(plane.transform.inv_transpose, glm::vec4(0, 1, 0, 0)));
 
     float surface_area = plane.transform.scale.x * plane.transform.scale.z;
-    float dist2 = glm::length2(hit_pt - r.org);
+    float dist2 = glm::dot(hit_pt - r.org, hit_pt - r.org);
     float cos_light = glm::dot(-r.dir, light_normal);
     if (cos_light <= 0.0001) {
         return 0.f;
@@ -116,7 +115,7 @@ __device__ cstd::optional<LightSample> sample_direct_light(glm::vec3 p, glm::vec
 
     int light_idx = static_cast<int>(u01(rng) * num_lights);
     light_idx = glm::min(light_idx, num_lights - 1);
-    
+
     const Light& light = lights[light_idx];
 
     cstd::optional<LightSample> sample = sample_li(p, nor, light, geoms, num_geoms, rng);

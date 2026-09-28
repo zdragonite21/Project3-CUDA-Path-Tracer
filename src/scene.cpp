@@ -4,7 +4,6 @@
 
 #include "json.hpp"
 #include <glm/gtc/matrix_inverse.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -114,6 +113,8 @@ void Scene::load_from_json(const std::string& json_name) {
             new_geom.type = Cube;
         } else if (type == "plane") {
             new_geom.type = Plane;
+        } else if (type == "sdf") {
+            new_geom.type = Sdf;
         } else {
             new_geom.type = Sphere;
         }
