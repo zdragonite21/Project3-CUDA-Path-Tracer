@@ -6,7 +6,9 @@
 #include "sampling.cuh"
 #include "scene_structs.h"
 #include "shading.cuh"
+#include "utilities.h"
 #include <corecrt_terminate.h>
+
 
 __device__ inline float power_heuristic(float pdf_a, float pdf_b) {
     float a2 = pdf_a * pdf_a;
@@ -16,6 +18,27 @@ __device__ inline float power_heuristic(float pdf_a, float pdf_b) {
 
 __device__ void terminate_path(PathSegment& path) {
     path.remaining_bounces = 0;
+}
+
+// nearest neighbor
+__device__ glm::vec3 eval_environment(const DeviceEnvMap& env, glm::vec3 wi) {
+    if (env.texture == 0) {
+        return glm::vec3(0.0f);
+    }
+
+    glm::vec3 d = glm::normalize(wi);
+
+    float theta = acosf(glm::clamp(d.y, -1.f, 1.f));
+    float phi = atan2f(d.z, d.x);
+    if (phi < 0.f) {
+        phi += 2.f * PI;
+    }
+
+    float u = phi / (2.f * PI);
+    float v = theta / PI;
+
+    float4 rgb = tex2D<float4>(env.texture, u, v);
+    return env.strength * glm::vec3(rgb.x, rgb.y, rgb.z);
 }
 
 __device__ cstd::optional<ShadowRay> estimate_direct_lighting(const PathSegment& path, glm::vec3 p,
@@ -122,7 +145,7 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     ShadeableIntersection intersection = shadeable_intersections[idx];
     RngEng rng = make_seeded_rng(iter, idx, depth);
     glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
-    const glm::vec3 &nor = intersection.surface_normal;
+    const glm::vec3& nor = intersection.surface_normal;
 
 #if LI_MIS
     if (is_not_specular(material)) {

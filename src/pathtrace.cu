@@ -1,6 +1,7 @@
 #include "pathtrace.h"
 
 #include "config.h"
+#include "display.cuh"
 #include "intersections.cuh"
 #include "sampling.cuh"
 #include "scene.h"
@@ -8,11 +9,11 @@
 #include "shading.cuh"
 #include "thrust_utils.h"
 #include "utilities.h"
-#include "display.cuh"
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <driver_types.h>
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define check_cuda_error(msg) check_cuda_error_fn(msg, FILENAME, __LINE__)
@@ -46,6 +47,8 @@ static ShadeableIntersection* dev_intersections = NULL;
 static Light* dev_lights = NULL;
 static MatId* dev_isect_mat_ids = NULL;
 static ShadowRay* dev_shadow_rays = NULL;
+static cudaArray_t env_array = NULL;
+static DeviceEnvMap device_env{};
 
 cudaStream_t pt_stream;
 
@@ -58,22 +61,46 @@ void pathtrace_init(Scene* scene) {
     const int num_pixels = cam.resolution.x * cam.resolution.y;
 
     cudaMalloc(&dev_image, num_pixels * sizeof(glm::vec3));
-
     cudaMalloc(&dev_paths, num_pixels * sizeof(PathSegment));
-
     cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
-
     cudaMalloc(&dev_lights, scene->lights.size() * sizeof(Light));
-
     cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
-
     cudaMalloc(&dev_intersections, num_pixels * sizeof(ShadeableIntersection));
-
     cudaMalloc(&dev_shadow_rays, num_pixels * sizeof(ShadowRay));
-
     cudaMalloc(&dev_isect_mat_ids, num_pixels * sizeof(MatId));
 
     cudaStreamCreate(&pt_stream);
+
+    // environment map uploading
+    if (!scene->env.pixels.empty()) {
+        std::vector<float4> upload_pixels(scene->env.pixels.size());
+
+        for (size_t i = 0; i < upload_pixels.size(); ++i) {
+            const glm::vec3 rgb = scene->env.pixels[i];
+            upload_pixels[i] = make_float4(rgb.r, rgb.g, rgb.b, 1.0f);
+        }
+
+        const cudaChannelFormatDesc format = cudaCreateChannelDesc<float4>();
+        cudaMallocArray(&env_array, &format, scene->env.width, scene->env.height);
+        const size_t row_bytes = static_cast<size_t>(scene->env.width) * sizeof(float4);
+        cudaMemcpy2DToArray(env_array, 0, 0, upload_pixels.data(), row_bytes, row_bytes,
+                            scene->env.height, cudaMemcpyHostToDevice);
+
+        cudaResourceDesc resource{};
+        resource.resType = cudaResourceTypeArray;
+        resource.res.array.array = env_array;
+
+        cudaTextureDesc sampler{};
+        sampler.addressMode[0] = cudaAddressModeWrap;
+        sampler.addressMode[1] = cudaAddressModeClamp;
+        sampler.filterMode = cudaFilterModeLinear;
+        sampler.readMode = cudaReadModeElementType;
+        sampler.normalizedCoords = 1;
+
+        cudaCreateTextureObject(&device_env.texture, &resource, &sampler, nullptr);
+
+        device_env.strength = scene->env.strength;
+    }
 
     check_cuda_error("pathtrace_init");
 }
@@ -112,6 +139,7 @@ void pathtrace_free() {
     cudaFree(dev_isect_mat_ids);
     cudaFree(dev_lights);
     cudaFree(dev_shadow_rays);
+    cudaFreeArray(env_array);
 
     cudaStreamDestroy(pt_stream);
 

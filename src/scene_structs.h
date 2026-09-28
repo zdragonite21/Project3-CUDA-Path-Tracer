@@ -83,6 +83,11 @@ struct RenderState {
     std::string image_name;
 };
 
+struct DeviceEnvMap {
+    cudaTextureObject_t texture = 0;
+    float strength = 1.f;
+};
+
 struct PathSegment {
     Ray ray;
     glm::vec3 throughput;
