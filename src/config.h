@@ -7,3 +7,5 @@
 
 #define LI_MIS 1
 #define RUSSIAN_ROULETTE 1
+
+#define AGX_TONEMAP 1

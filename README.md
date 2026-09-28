@@ -18,3 +18,5 @@ CUDA Path Tracer
 - some of the sampling code was taken from my CIS 4610 path tracer
 
 
+- https://github.com/bWFuanVzYWth/AgX/blob/main/agx.glsl
+

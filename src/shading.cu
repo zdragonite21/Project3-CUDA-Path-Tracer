@@ -125,7 +125,6 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     const glm::vec3 &nor = intersection.surface_normal;
 
 #if LI_MIS
-
     if (is_not_specular(material)) {
         // if not delta (so change this when I add microfacet)
         cstd::optional<ShadowRay> sray = estimate_direct_lighting(

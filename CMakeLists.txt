@@ -64,6 +64,7 @@ set(headers
     src/light_sampling.cuh
     src/shading.cuh
     src/config.h
+    src/display.cuh
 )
 
 set(sources
@@ -80,6 +81,7 @@ set(sources
     src/sampling.cu
     src/light_sampling.cu
     src/shading.cu
+    src/display.cu
 )
 
 set(imgui_headers

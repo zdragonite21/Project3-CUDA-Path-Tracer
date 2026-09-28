@@ -8,6 +8,7 @@
 #include "shading.cuh"
 #include "thrust_utils.h"
 #include "utilities.h"
+#include "display.cuh"
 
 #include <cstdio>
 #include <cstdlib>
@@ -33,32 +34,6 @@ void check_cuda_error_fn(const char* msg, const char* file, int line) {
 #endif // _WIN32
     exit(EXIT_FAILURE);
 #endif // ERRORCHECK
-}
-
-// Kernel that writes the image to the OpenGL PBO directly.
-__global__ void send_image_to_pbo(uchar4* pbo, glm::ivec2 resolution, int iter, glm::vec3* image) {
-    if (iter == 0) {
-        return;
-    }
-
-    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
-
-    if (x < resolution.x && y < resolution.y) {
-        int index = x + (y * resolution.x);
-        glm::vec3 pix = image[index];
-
-        glm::ivec3 color;
-        color.x = glm::clamp((int)(pix.x / iter * 255.0), 0, 255);
-        color.y = glm::clamp((int)(pix.y / iter * 255.0), 0, 255);
-        color.z = glm::clamp((int)(pix.z / iter * 255.0), 0, 255);
-
-        // Each thread writes one pixel location in the texture (textel)
-        pbo[index].w = 0;
-        pbo[index].x = color.x;
-        pbo[index].y = color.y;
-        pbo[index].z = color.z;
-    }
 }
 
 static Scene* hst_scene = NULL;

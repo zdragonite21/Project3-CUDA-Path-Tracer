@@ -110,7 +110,7 @@
             "SCALE": [1.5, 1.5, 1.5]
         },
         {
-            "TYPE": "cube",
+            "TYPE": "sphere",
             "MATERIAL": "glass",
             "TRANS": [1.0, 2.0, 1.0],
             "ROTAT": [0.0, 0.0, 0.0],
