@@ -33,8 +33,8 @@ namespace detail
 		GLM_FUNC_QUALIFIER vec<2, T, Q> operator ()()  const { return vec<2, T, Q>(this->elem(E0), this->elem(E1)); }
 	};
 
-	template<typename T, qualifier Q, int E0, int E1, int E2>
-	struct _swizzle_base1<3, T, Q, E0,E1,E2,3, false> : public _swizzle_base0<T, 3>
+	template<typename T, qualifier Q, int E0, int E1, int E2, int E3>
+	struct _swizzle_base1<3, T, Q, E0,E1,E2,E3, false> : public _swizzle_base0<T, 3>
 	{
 		GLM_FUNC_QUALIFIER vec<3, T, Q> operator ()()  const { return vec<3, T, Q>(this->elem(E0), this->elem(E1), this->elem(E2)); }
 	};

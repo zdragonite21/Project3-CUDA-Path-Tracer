@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../scene_structs.h"
+
 #include <cuda_runtime.h>
-#include <glm/glm.hpp>
 
+__device__ float scene_intersect(Ray r);
 
-__device__ float scene_sdf(glm::vec3 p);
+__device__ glm::vec3 scene_normal(glm::vec3 p);

@@ -1,5 +1,6 @@
 #include "intersections.cuh"
 #include "scene_structs.h"
+#include "sdf/sdf_scene.cuh"
 
 #include <cfloat>
 
@@ -136,11 +137,27 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     return t;
 }
 
-__host__ __device__ float sdf_intersection_test(const Geom& sdf, Ray r,
+__device__ float sdf_intersection_test(const Geom& sdf, Ray r,
                                                 glm::vec3* intersection_point, glm::vec3* normal,
                                                 bool* back_facing) {
-    // sphere trace
-    // compute normal
+    glm::vec3 ro = multiply_mv(sdf.transform.inverse, glm::vec4(r.org, 1.0f));
+    glm::vec3 rd = multiply_mv(sdf.transform.inverse, glm::vec4(r.dir, 0.0f));
+
+    float t = scene_intersect(Ray{ro, rd});
+    if (t <= 0.0f)
+        return -1.0f;
+
+    if (back_facing) {
+        *back_facing = false;
+    }
+    if (intersection_point) {
+        *intersection_point = get_point_on_ray(r, t);
+    }
+    if (normal) {
+        glm::vec3 p = ro + rd * t;
+        glm::vec3 nor = scene_normal(p);
+        *normal = glm::normalize(multiply_mv(sdf.transform.inv_transpose, glm::vec4(nor, 0.f)));
+    }
 
     return 0.f;
 }

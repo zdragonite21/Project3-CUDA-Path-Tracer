@@ -17,6 +17,7 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+
     # Set the possible values of build type for cmake-gui
     SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
@@ -65,6 +66,9 @@ set(headers
     src/shading.cuh
     src/config.h
     src/display.cuh
+    src/sdf/sdf_scene.cuh
+    src/sdf/sdf_structs.cuh
+    src/sdf/sdf_utils.cuh
 )
 
 set(sources
@@ -82,6 +86,9 @@ set(sources
     src/light_sampling.cu
     src/shading.cu
     src/display.cu
+    src/sdf/sdf_scene.cu
+    src/sdf/sdf_structs.cu
+    src/sdf/sdf_utils.cu
 )
 
 set(imgui_headers
@@ -116,23 +123,25 @@ source_group("Sources" FILES ${sources})
 source_group("ImGui\\Headers" FILES ${imgui_headers})
 source_group("ImGui\\Sources" FILES ${imgui_sources})
 
-#add_subdirectory(external/imgui)
-#add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
-
+# add_subdirectory(external/imgui)
+# add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
 add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers} ${imgui_sources} ${imgui_headers})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/external/imgui/ImGui")
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${GL_LIBRARIES}
     CUDA::cudart
-    #stream_compaction  # TODO: uncomment if using your stream compaction
+
+    # stream_compaction  # TODO: uncomment if using your stream compaction
 )
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES native)
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>")
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CUDA>>:--split-compile=0;-lineinfo;-src-in-ptx>;")
+target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
+    "$<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>"
+)
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE GLM_FORCE_SWIZZLE)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME})
-

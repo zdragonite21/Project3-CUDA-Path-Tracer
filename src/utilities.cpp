@@ -69,16 +69,16 @@ bool utility_core::epsilon_check(float a, float b) {
 glm::mat4 utility_core::build_transformation_matrix(glm::vec3 translation,
                                                  glm::vec3 rotation,
                                                  glm::vec3 scale) {
-    glm::mat4 translation_mat = glm::translate(glm::mat4(), translation);
+    glm::mat4 translation_mat = glm::translate(glm::mat4(1.f), translation);
     glm::mat4 rotation_mat = glm::rotate(
-        glm::mat4(), rotation.x * (float)PI / 180, glm::vec3(1, 0, 0));
+        glm::mat4(1.f), rotation.x * (float)PI / 180, glm::vec3(1, 0, 0));
     rotation_mat =
-        rotation_mat * glm::rotate(glm::mat4(), rotation.y * (float)PI / 180,
+        rotation_mat * glm::rotate(glm::mat4(1.f), rotation.y * (float)PI / 180,
                                   glm::vec3(0, 1, 0));
     rotation_mat =
-        rotation_mat * glm::rotate(glm::mat4(), rotation.z * (float)PI / 180,
+        rotation_mat * glm::rotate(glm::mat4(1.f), rotation.z * (float)PI / 180,
                                   glm::vec3(0, 0, 1));
-    glm::mat4 scale_mat = glm::scale(glm::mat4(), scale);
+    glm::mat4 scale_mat = glm::scale(glm::mat4(1.f), scale);
     return translation_mat * rotation_mat * scale_mat;
 }
 

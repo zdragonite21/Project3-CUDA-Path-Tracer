@@ -175,5 +175,5 @@ void Scene::load_from_json(const std::string& json_name) {
     // set up render camera stuff
     int arraylen = camera.resolution.x * camera.resolution.y;
     state.image.resize(arraylen);
-    std::fill(state.image.begin(), state.image.end(), glm::vec3());
+    std::fill(state.image.begin(), state.image.end(), glm::vec3(0));
 }
