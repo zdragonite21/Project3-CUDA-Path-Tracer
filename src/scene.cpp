@@ -77,7 +77,7 @@ void Scene::load_from_json(const std::string &json_name) {
     const auto &objects_data = data["Objects"];
     for (const auto &p : objects_data) {
         const auto &type = p["TYPE"];
-        Geom new_geom;
+        Geom new_geom{};
         if (type == "cube") {
             new_geom.type = Cube;
         } else if (type == "plane") {

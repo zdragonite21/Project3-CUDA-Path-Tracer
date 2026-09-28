@@ -1,4 +1,3 @@
-#include "bxdf_utils.cuh"
 #include "intersections.cuh"
 #include "light_sampling.cuh"
 #include <glm/gtx/norm.hpp>
@@ -56,18 +55,7 @@ __device__ float pdf_plane_light(Ray r, const Geom& plane) {
     return area_to_solid_angle_pdf(1.f / surface_area, dist2, cos_light);
 }
 
-__device__ cstd::optional<LightSample> sample_area_light(glm::vec3 p, const Geom& geom,
-                                                         RngEng& rng) {
-    switch (geom.type) {
-    case GeomType::Plane:
-        return sample_plane_light(p, geom, rng);
-    default:
-        return cstd::nullopt;
-    }
-}
-
-__device__ float pdf_li(const Ray &r, const Light& light, const Geom* geoms,
-                        int num_geoms) {
+__device__ float pdf_li(const Ray& r, const Light& light, const Geom* geoms, int num_geoms) {
     switch (light.type) {
     case LightType::Area:
         return pdf_plane_light(r, geoms[light.geom_id]);
@@ -77,25 +65,19 @@ __device__ float pdf_li(const Ray &r, const Light& light, const Geom* geoms,
     }
 }
 
-// __device__ glm::vec3 eval_li(glm::vec3 p, glm::vec3 wi, const Light& light, const Geom* geoms,
-//                          int num_geoms) {
-//     Ray r = bx::spawn_ray(p, wi);
-
-//     switch (light.type) {
-//     case LightType::Area:
-//         return pdf_plane_light(r, geoms[light.geom_id]);
-//     case LightType::Environment:
-//         // not supported yet
-//         return 0.f;
-//     }
-// }
-
 // sample one light
 __device__ cstd::optional<LightSample> sample_li(glm::vec3 p, glm::vec3 nor, const Light& light,
                                                  const Geom* geoms, int num_geoms, RngEng& rng) {
     switch (light.type) {
-    case LightType::Area:
-        return sample_area_light(p, geoms[light.geom_id], rng);
+    case LightType::Area: {
+        const Geom& geom = geoms[light.geom_id];
+        switch (geom.type) {
+        case GeomType::Plane:
+            return sample_plane_light(p, geom, rng);
+        default:
+            return cstd::nullopt;
+        }
+    }
     case LightType::Environment:
         // not supported yet
         return cstd::nullopt;

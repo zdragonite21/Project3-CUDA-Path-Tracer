@@ -27,11 +27,13 @@ struct Transform {
 };
 
 struct Geom {
-    enum GeomType type;
+    GeomType type;
     int material_id;
     int light_idx;
 
     Transform transform;
+
+    Geom() : type{}, material_id{}, light_idx(-1), transform{} {}
 };
 
 enum class LightType { Area, Environment };

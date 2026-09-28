@@ -33,7 +33,7 @@ __device__ cstd::optional<ShadowRay> estimate_direct_lighting(const PathSegment&
     glm::vec3 bsdf_f = eval_bsdf(p, nor, -path.ray.dir, ls->wi, m);
     float bsdf_p = pdf_bsdf(p, nor, -path.ray.dir, ls->wi, m);
 
-    float w = power_heuristic(ls->pdf, bsdf_p);
+    float w = path.remaining_bounces > 1 ? power_heuristic(ls->pdf, bsdf_p) : 1.f;
 
     ShadowRay sray{};
     sray.ray = bx::spawn_ray(p, ls->wi);
@@ -96,6 +96,8 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
 
     Material material = materials[mat_id];
     if (material.type == MatType::Emissive && material.emission != glm::vec3(0)) {
+
+#if LI_MIS
         if (depth == 0 || path.prev_was_delta) {
             image[path.pixel_index] += path.throughput * material.emission;
         } else {
@@ -107,6 +109,9 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
             float w = power_heuristic(path.prev_bsdf_pdf, li_pdf);
             image[path.pixel_index] += w * path.throughput * material.emission;
         }
+#else
+        image[path.pixel_index] += path.throughput * material.emission;
+#endif
 
         terminate_path(path_segments[idx]);
         return;
@@ -114,13 +119,12 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
 
     // bounce
 
-    glm::vec3 radiance(0);
     ShadeableIntersection intersection = shadeable_intersections[idx];
     RngEng rng = make_seeded_rng(iter, idx, depth);
+    glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
+    const glm::vec3 &nor = intersection.surface_normal;
 
 #if LI_MIS
-    glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
-    glm::vec3 nor = intersection.surface_normal;
 
     if (is_not_specular(material)) {
         // if not delta (so change this when I add microfacet)
@@ -133,16 +137,8 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     }
 
     scatter_ray(path, p, nor, material, rng);
-
-#elif LI_DIRECT
-    glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
-    glm::vec3 direct = estimate_direct_lighting(path, p, intersection.surface_normal, material, rng,
-                                                lights, num_lights, geoms, num_geoms);
-    radiance += direct;
-    path.remaining_bounces = 0;
 #else
-    glm::vec3 intersect = get_point_on_ray(path.ray, intersection.t);
-    scatter_ray(path, intersect, intersection.surface_normal, material, rng);
+    scatter_ray(path, p, nor, material, rng);
 #endif
 
 #if RUSSIAN_ROULETTE
@@ -160,8 +156,6 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     }
 #endif
     path_segments[idx] = path;
-    // final gather
-    image[path.pixel_index] += radiance;
 }
 
 __global__ void trace_shadow_rays(int num_srays, int num_geoms, ShadowRay* shadow_rays,

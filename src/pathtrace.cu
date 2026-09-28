@@ -223,11 +223,13 @@ void pathtrace(uchar4* pbo, int iter) {
             dev_lights, dev_geoms, dev_image);
         check_cuda_error("shader material");
 
+#if LI_MIS
         int num_srays = num_paths;
         dim3 num_blocks_srays = utility_core::divup(num_srays, block_size_1d);
         trace_shadow_rays<<<num_blocks_srays, block_size_1d, 0, pt_stream>>>(
             num_srays, hst_scene->geoms.size(), dev_shadow_rays, dev_geoms, dev_image);
         check_cuda_error("trace shadow rays");
+#endif
 
 #if COMPACT_TERMINATED
 #if SORT_PATHS

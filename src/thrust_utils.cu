@@ -42,9 +42,3 @@ int compact_terminated(int num_paths, PathSegment* paths, cudaStream_t stream) {
     auto new_end = thrust::remove_if(policy, paths, paths + num_paths, IsPathTerminated{});
     return new_end - paths;
 }
-
-int compact_shadow_rays(int num_paths, ShadowRay* srays, cudaStream_t stream) {
-    auto policy = thrust::cuda::par_nosync.on(stream);
-    auto new_end = thrust::remove_if(policy, srays, srays + num_paths, IsShadowRayInvalid{});
-    return new_end - srays;
-}
