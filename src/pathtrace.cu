@@ -223,7 +223,7 @@ void pathtrace(uchar4* pbo, int iter) {
         shade_material<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
             iter, num_paths, depth, hst_scene->lights.size(), hst_scene->geoms.size(),
             dev_intersections, dev_isect_mat_ids, dev_paths, dev_shadow_rays, dev_materials,
-            dev_lights, dev_geoms, dev_image);
+            dev_lights, dev_geoms, dev_image, device_env);
         check_cuda_error("shader material");
 
 #if LI_MIS

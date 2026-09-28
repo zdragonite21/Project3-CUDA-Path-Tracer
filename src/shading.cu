@@ -9,7 +9,6 @@
 #include "utilities.h"
 #include <corecrt_terminate.h>
 
-
 __device__ inline float power_heuristic(float pdf_a, float pdf_b) {
     float a2 = pdf_a * pdf_a;
     float b2 = pdf_b * pdf_b;
@@ -97,7 +96,8 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
                                const ShadeableIntersection* shadeable_intersections,
                                const MatId* isect_mat_ids, PathSegment* path_segments,
                                ShadowRay* shadow_rays, const Material* materials,
-                               const Light* lights, const Geom* geoms, glm::vec3* image) {
+                               const Light* lights, const Geom* geoms, glm::vec3* image,
+                               DeviceEnvMap env) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_paths || path_segments[idx].remaining_bounces <= 0) {
         return;
@@ -110,7 +110,7 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     PathSegment path = path_segments[idx];
     MatId mat_id = isect_mat_ids[idx];
     if (mat_id == UINT8_MAX) {
-        // hit env map
+        image[path.pixel_index] += path.throughput * eval_environment(env, path.ray.dir);
         terminate_path(path_segments[idx]);
         return;
     }
