@@ -8,6 +8,9 @@
 
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iterator>
+#include <ostream>
+#include <sstream>
 
 #include <cstdio>
 #include <iostream>

@@ -105,14 +105,14 @@
         },
         {
             "TYPE": "sphere",
-            "MATERIAL": "gold",
+            "MATERIAL": "glass",
             "TRANS": [-2.0, 2.0, 1.0],
             "ROTAT": [0.0, 0.0, 0.0],
             "SCALE": [1.5, 1.5, 1.5]
         },
         {
             "TYPE": "sdf",
-            "MATERIAL": "diffuse",
+            "MATERIAL": "glass",
             "TRANS": [2.0, 2.0, 1.0],
             "ROTAT": [0.0, 0.0, 0.0],
             "SCALE": [1.5, 1.5, 1.5]

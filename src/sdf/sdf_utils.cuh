@@ -20,7 +20,6 @@ __device__ float trace_sdf(Ray r, Map map, float t_min, float t_max, float eps) 
     const int MAX_STEPS = 128;
 
     float t = t_min;
-
     if (t > t_max) {
         return -1.f;
     }

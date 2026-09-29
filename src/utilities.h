@@ -1,12 +1,7 @@
 #pragma once
 
-#include "glm/glm.hpp"
-
-#include <algorithm>
+#include <glm/glm.hpp>
 #include <istream>
-#include <iterator>
-#include <ostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -23,18 +18,15 @@ class GuiDataContainer {
 };
 
 namespace utility_core {
-extern void coordinate_system(glm::vec3 in_nor, glm::vec3 &out_tan,
-                                          glm::vec3 &out_bit);
+extern void coordinate_system(glm::vec3 in_nor, glm::vec3& out_tan, glm::vec3& out_bit);
 extern int divup(int x, int n);
 extern float clamp(float f, float min, float max);
-extern bool replace_string(std::string &str, const std::string &from,
-                          const std::string &to);
+extern bool replace_string(std::string& str, const std::string& from, const std::string& to);
 extern glm::vec3 clamp_rgb(glm::vec3 color);
 extern std::vector<std::string> tokenize_string(std::string str);
-extern glm::mat4 build_transformation_matrix(glm::vec3 translation,
-                                           glm::vec3 rotation, glm::vec3 scale);
+extern glm::mat4 build_transformation_matrix(glm::vec3 translation, glm::vec3 rotation,
+                                             glm::vec3 scale);
 extern std::string convert_int_to_string(int number);
-extern std::istream &
-safe_getline(std::istream &is,
-            std::string &t); // Thanks to http://stackoverflow.com/a/6089413
+extern std::istream& safe_getline(std::istream& is,
+                                  std::string& t); // Thanks to http://stackoverflow.com/a/6089413
 } // namespace utility_core

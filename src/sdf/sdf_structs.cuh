@@ -6,3 +6,7 @@
 struct SphereSDF {
     __device__ float operator()(glm::vec3 p) const;
 };
+
+struct MandelbulbSDF {
+    __device__ float operator()(glm::vec3 p) const;
+};
