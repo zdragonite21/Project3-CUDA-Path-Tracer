@@ -86,6 +86,6 @@ static __device__ bool refract(glm::vec3 wo, glm::vec3 n, float eta, glm::vec3 &
     return true;
 }
 static __device__ Ray spawn_ray(glm::vec3 pos, glm::vec3 wi) {
-    return Ray{pos + wi * 0.0001f, wi};
+    return Ray{pos + wi * 1e-4f, wi};
 }
 } // namespace bx

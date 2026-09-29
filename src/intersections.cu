@@ -137,29 +137,37 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     return t;
 }
 
-__device__ float sdf_intersection_test(const Geom& sdf, Ray r,
-                                                glm::vec3* intersection_point, glm::vec3* normal,
-                                                bool* back_facing) {
+__device__ float sdf_intersection_test(const Geom& sdf, Ray r, glm::vec3* intersection_point,
+                                       glm::vec3* normal, bool* back_facing) {
     glm::vec3 ro = multiply_mv(sdf.transform.inverse, glm::vec4(r.org, 1.0f));
-    glm::vec3 rd = multiply_mv(sdf.transform.inverse, glm::vec4(r.dir, 0.0f));
+    glm::vec3 rd_obj = multiply_mv(sdf.transform.inverse, glm::vec4(r.dir, 0.0f));
+    float rd_len = glm::length(rd_obj);
+    if (rd_len == 0.f) {
+        return -1.0f;
+    }
+    glm::vec3 rd = rd_obj / rd_len;
 
-    float t = scene_intersect(Ray{ro, rd});
-    if (t <= 0.0f)
+    float s = scene_intersect(Ray{ro, rd});
+    if (s <= 0.0f)
         return -1.0f;
 
-    if (back_facing) {
-        *back_facing = false;
-    }
+    float t = s / rd_len;
+
     if (intersection_point) {
-        *intersection_point = get_point_on_ray(r, t);
+        *intersection_point = r.org + r.dir * t;
     }
-    if (normal) {
-        glm::vec3 p = ro + rd * t;
+    if (normal || back_facing) {
+        glm::vec3 p = ro + rd * s;
         glm::vec3 nor = scene_normal(p);
-        *normal = glm::normalize(multiply_mv(sdf.transform.inv_transpose, glm::vec4(nor, 0.f)));
+        if (back_facing) {
+            *back_facing = glm::dot(rd, nor) > 0.f;
+        }
+        if (normal) {
+            *normal = glm::normalize(multiply_mv(sdf.transform.inv_transpose, glm::vec4(nor, 0.f)));
+        }
     }
 
-    return 0.f;
+    return t;
 }
 
 __device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int num_geoms) {

@@ -16,13 +16,20 @@ template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map) {
 }
 
 template <typename Map> __device__ float trace_sdf(Ray r, Map map) {
-    const float tmax = 16.0;
-    float t = 0.01;
-    for (int i = 0; i < 128; i++) {
-        float h = map(r.org + r.dir * t);
-        if (h < 0.0001f || t > tmax)
+    const float EPS = 1e-5;
+    const float T_MAX = 100.0;
+    const int MAX_STEPS = 128;
+
+    float t = 0.f;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        float d = map(r.org + r.dir * t);
+        if (glm::abs(d) < EPS)
+            return t;
+        t += glm::abs(d);
+
+        if (t > T_MAX) {
             break;
-        t += h;
+        }
     }
-    return (t < tmax) ? t : -1.0;
+    return -1.f;
 }
