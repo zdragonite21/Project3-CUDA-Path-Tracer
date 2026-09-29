@@ -4,10 +4,10 @@
 
 using namespace glm;
 
-__device__ float scene_intersect(Ray r) {
-    return trace_sdf(r, SphereSDF{});
+__device__ float scene_intersect(Ray r, float t_min, float t_max, float eps) {
+    return trace_sdf<SphereSDF>(r, SphereSDF{}, t_min, t_max, eps);
 }
 
-__device__ vec3 scene_normal(vec3 p) {
-    return calc_normal(p, SphereSDF{});
+__device__ vec3 scene_normal(vec3 p, float eps) {
+    return calc_normal<SphereSDF>(p, SphereSDF{}, eps);
 }

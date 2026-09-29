@@ -5,8 +5,8 @@
 
 #include "../scene_structs.h"
 
-template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map) {
-    const float e = 0.5773f * 0.0001f;
+template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map, float eps) {
+    const float e = 0.5773f * eps;
     const glm::vec3 k1(e, -e, -e);
     const glm::vec3 k2(-e, -e, e);
     const glm::vec3 k3(-e, e, -e);
@@ -15,19 +15,23 @@ template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map) {
                           k4 * map(p + k4));
 }
 
-template <typename Map> __device__ float trace_sdf(Ray r, Map map) {
-    const float EPS = 1e-5;
-    const float T_MAX = 100.0;
+template <typename Map>
+__device__ float trace_sdf(Ray r, Map map, float t_min, float t_max, float eps) {
     const int MAX_STEPS = 128;
 
-    float t = 0.f;
+    float t = t_min;
+
+    if (t > t_max) {
+        return -1.f;
+    }
+    
     for (int i = 0; i < MAX_STEPS; i++) {
         float d = map(r.org + r.dir * t);
-        if (glm::abs(d) < EPS)
+        if (glm::abs(d) < eps)
             return t;
         t += glm::abs(d);
 
-        if (t > T_MAX) {
+        if (t > t_max) {
             break;
         }
     }

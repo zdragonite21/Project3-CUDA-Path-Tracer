@@ -62,10 +62,6 @@ glm::vec3 utility_core::clamp_rgb(glm::vec3 color) {
     return color;
 }
 
-bool utility_core::epsilon_check(float a, float b) {
-    return fabs(fabs(a) - fabs(b)) < EPSILON;
-}
-
 glm::mat4 utility_core::build_transformation_matrix(glm::vec3 translation,
                                                  glm::vec3 rotation,
                                                  glm::vec3 scale) {

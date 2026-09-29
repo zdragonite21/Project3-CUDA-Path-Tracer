@@ -1,3 +1,4 @@
+#include "config.h"
 #include "intersections.cuh"
 #include "light_sampling.cuh"
 #include "sampling.cuh"
@@ -25,7 +26,7 @@ __device__ cstd::optional<LightSample> sample_plane_light(glm::vec3 p, const Geo
     sample.wi = v / sample.dist;
 
     float cos_t = glm::dot(-sample.wi, light_normal);
-    if (cos_t <= 0.0001) {
+    if (cos_t <= numeric::min_cos) {
         return cstd::nullopt;
     }
 
@@ -49,7 +50,7 @@ __device__ float pdf_plane_light(Ray r, const Geom& plane) {
     float surface_area = plane.transform.scale.x * plane.transform.scale.z;
     float dist2 = glm::dot(hit_pt - r.org, hit_pt - r.org);
     float cos_light = glm::dot(-r.dir, light_normal);
-    if (cos_light <= 0.0001) {
+    if (cos_light <= numeric::min_cos) {
         return 0.f;
     }
     return area_to_solid_angle_pdf(1.f / surface_area, dist2, cos_light);

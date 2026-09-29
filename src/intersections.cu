@@ -1,3 +1,4 @@
+#include "config.h"
 #include "intersections.cuh"
 #include "scene_structs.h"
 #include "sdf/sdf_scene.cuh"
@@ -110,7 +111,7 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     glm::vec3 ro = multiply_mv(plane.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(plane.transform.inverse, glm::vec4(r.dir, 0.0f));
 
-    if (glm::abs(rd.y) <= 0.0001) {
+    if (glm::abs(rd.y) <= numeric::min_cos * glm::length(rd)) {
         return -1;
     }
 
@@ -137,28 +138,30 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     return t;
 }
 
-__device__ float sdf_intersection_test(const Geom& sdf, Ray r, glm::vec3* intersection_point,
-                                       glm::vec3* normal, bool* back_facing) {
+__device__ float sdf_intersection_test(const Geom& sdf, Ray r, float t_max,
+                                       glm::vec3* intersection_point, glm::vec3* normal,
+                                       bool* back_facing) {
     glm::vec3 ro = multiply_mv(sdf.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd_obj = multiply_mv(sdf.transform.inverse, glm::vec4(r.dir, 0.0f));
     float rd_len = glm::length(rd_obj);
     if (rd_len == 0.f) {
         return -1.0f;
     }
-    glm::vec3 rd = rd_obj / rd_len;
+    float inv_rd_len = 1.f / rd_len;
+    glm::vec3 rd = rd_obj * inv_rd_len;
 
-    float s = scene_intersect(Ray{ro, rd});
+    float s = scene_intersect(Ray{ro, rd}, 0.f, t_max * rd_len, numeric::sdf_hit * rd_len);
     if (s <= 0.0f)
         return -1.0f;
 
-    float t = s / rd_len;
+    float t = s * inv_rd_len;
 
     if (intersection_point) {
         *intersection_point = r.org + r.dir * t;
     }
     if (normal || back_facing) {
         glm::vec3 p = ro + rd * s;
-        glm::vec3 nor = scene_normal(p);
+        glm::vec3 nor = scene_normal(p, numeric::sdf_normal * rd_len);
         if (back_facing) {
             *back_facing = glm::dot(rd, nor) > 0.f;
         }
@@ -187,7 +190,7 @@ __device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int
             t = sphere_intersection_test(geom, r, nullptr, nullptr, nullptr);
             break;
         case GeomType::Sdf:
-            t = sdf_intersection_test(geom, r, nullptr, nullptr, nullptr);
+            t = sdf_intersection_test(geom, r, min_t, nullptr, nullptr, nullptr);
         }
         if (t > 0 && t < min_t) {
             return false;
@@ -231,7 +234,7 @@ __global__ void compute_intersections(int num_paths, const PathSegment* path_seg
                 }
                 break;
             case Sdf:
-                t = sdf_intersection_test(geom, r, nullptr, &tmp_normal, &outside);
+                t = sdf_intersection_test(geom, r, t_min, nullptr, &tmp_normal, &outside);
                 break;
             }
 
