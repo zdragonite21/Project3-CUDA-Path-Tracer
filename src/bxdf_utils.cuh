@@ -12,7 +12,7 @@ static __device__ __forceinline__ float cos2_theta(const glm::vec3& w) {
     return w.z * w.z;
 }
 static __device__ __forceinline__ float sin2_theta(const glm::vec3& w) {
-    return glm::max(0.0, 1.0 - cos2_theta(w));
+    return glm::max(0.f, 1.f - cos2_theta(w));
 }
 static __device__ __forceinline__ float sin_theta(const glm::vec3& w) {
     return glm::sqrt(sin2_theta(w));
@@ -25,11 +25,11 @@ static __device__ __forceinline__ float tan2_theta(const glm::vec3& w) {
 }
 static __device__ __forceinline__ float cos_phi(const glm::vec3& w) {
     float sin_theta_value = sin_theta(w);
-    return (sin_theta_value == 0) ? 0 : glm::clamp(w.x / sin_theta_value, -1.f, 1.f);
+    return (sin_theta_value == 0.f) ? 0.f : glm::clamp(w.x / sin_theta_value, -1.f, 1.f);
 }
 static __device__ __forceinline__ float sin_phi(const glm::vec3& w) {
     float sin_theta_value = sin_theta(w);
-    return (sin_theta_value == 0) ? 0 : glm::clamp(w.y / sin_theta_value, -1.f, 1.f);
+    return (sin_theta_value == 0.f) ? 0.f : glm::clamp(w.y / sin_theta_value, -1.f, 1.f);
 }
 static __device__ __forceinline__ float cos2_phi(const glm::vec3& w) {
     return cos_phi(w) * cos_phi(w);

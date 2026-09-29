@@ -172,7 +172,7 @@ __global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
             cam.right * cam.pixel_length.x * (sub_pixel_sample.x - (float)cam.resolution.x * 0.5f) -
             cam.up * cam.pixel_length.y * (sub_pixel_sample.y - (float)cam.resolution.y * 0.5f));
 
-        if (cam.lens_radius > 0.0) {
+        if (cam.lens_radius > 0.f) {
             float t = cam.focal_distance / glm::dot(ray.dir, cam.view);
             glm::vec3 p_focus = ray.org + ray.dir * t;
             glm::vec2 p_lens = cam.lens_radius * sample_uniform_disk(rng);

@@ -44,7 +44,7 @@ __device__ float fresnel_dielectric_eval(float cos_theta_i, float eta_i, float e
         cos_theta_i = std::abs(cos_theta_i);
     }
 
-    float sin_theta_i = glm::sqrt(glm::max(0.f, 1 - cos_theta_i * cos_theta_i));
+    float sin_theta_i = glm::sqrt(glm::max(0.f, 1.f - cos_theta_i * cos_theta_i));
     float sin_theta_t = eta_i / eta_t * sin_theta_i;
     if (sin_theta_t >= 1.f) {
         // total internal reflection
@@ -84,7 +84,7 @@ __device__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm::vec3 wo, const 
     UnifDist<float> u01(0, 1);
 
     // eta_i = 1.f because we assume air here
-    float r = fresnel_dielectric_eval(bx::cos_theta(wo), 1.0f, m.ior);
+    float r = fresnel_dielectric_eval(bx::cos_theta(wo), 1.f, m.ior);
     float t = 1.f - r;
 
     if (u01(rng) < r / (r + t)) {
@@ -97,8 +97,8 @@ __device__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm::vec3 wo, const 
     } else {
         // sample perfect specular transmission
         bool entering = bx::cos_theta(wo) > 0;
-        float eta_i = entering ? 1.0 : m.ior;
-        float eta_t = entering ? m.ior : 1.0;
+        float eta_i = entering ? 1.f : m.ior;
+        float eta_t = entering ? m.ior : 1.f;
         float eta = eta_i / eta_t;
         glm::vec3 wi;
         if (!bx::refract(wo, bx::face_forward(glm::vec3(0, 0, 1), wo), eta, wi)) {
@@ -135,7 +135,7 @@ __device__ BsdfSample sample_smooth_conductor(glm::vec3 p, glm::vec3 wo, const M
 
 __device__ BsdfSample sample_dielectric(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
     BsdfSample sample{};
-    if (m.roughness == 0.0) {
+    if (m.roughness == 0.f) {
         sample = sample_smooth_dielectric(p, wo, m, rng);
     }
 
@@ -144,7 +144,7 @@ __device__ BsdfSample sample_dielectric(glm::vec3 p, glm::vec3 wo, const Materia
 
 __device__ BsdfSample sample_conductor(glm::vec3 p, glm::vec3 wo, const Material& m, RngEng& rng) {
     BsdfSample sample{};
-    if (m.roughness == 0.0) {
+    if (m.roughness == 0.f) {
         sample = sample_smooth_conductor(p, wo, m);
     }
 

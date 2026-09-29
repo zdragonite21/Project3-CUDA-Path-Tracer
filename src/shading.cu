@@ -78,8 +78,8 @@ __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 no
 
     BsdfSample bs = sample_bsdf(p, normal, -path_segment.ray.dir, m, rng);
 
-    if (bs.type == BxdfFlag::Unset || bs.pdf == 0.0) {
-        path_segment.throughput = glm::vec3(0.0);
+    if (bs.type == BxdfFlag::Unset || bs.pdf == 0.f) {
+        path_segment.throughput = glm::vec3(0.f);
         terminate_path(path_segment);
     } else {
         path_segment.throughput *= bs.f * bx::abs_dot(bs.wi, normal) / bs.pdf;

@@ -71,7 +71,7 @@ __host__ __device__ float sphere_intersection_test(const Geom& sphere, Ray r,
 
     float a = glm::dot(rd, rd);
     float half_b = glm::dot(ro, rd);
-    float c = glm::dot(ro, ro) - 1.0f;
+    float c = glm::dot(ro, ro) - 1.f;
 
     float disc = half_b * half_b - a * c;
     if (disc < 0.f) {
@@ -116,13 +116,13 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     }
 
     float t = -ro.y / rd.y;
-    if (t <= 0.0001) {
+    if (t <= 0.0001f) {
         return -1;
     }
 
     glm::vec3 p_w = ro + rd * t;
 
-    if (glm::abs(p_w.x) > 0.5 || glm::abs(p_w.z) > 0.5) {
+    if (glm::abs(p_w.x) > 0.5f || glm::abs(p_w.z) > 0.5f) {
         return -1;
     }
 

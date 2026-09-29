@@ -23,7 +23,7 @@ __device__ float MandelbulbSDF::operator()(vec3 p) const {
         // z = z^8+c
         float r = length(w);
         float b = 8.f * acosf(w.y / r);
-        float a = 8.f * atan(w.x, w.z);
+        float a = 8.f * atan2f(w.x, w.z);
         w = p + __powf(r, 8.f) * vec3(__sinf(b) * __sinf(a), __cosf(b), __sinf(b) * __cosf(a));
 
         // trap = min(trap, vec4(abs(w), m));

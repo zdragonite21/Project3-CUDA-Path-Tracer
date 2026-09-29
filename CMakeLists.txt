@@ -140,6 +140,8 @@ target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Debug,Rel
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CUDA>>:--split-compile=0;-lineinfo;-src-in-ptx>;")
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>"
+    "$<$<COMPILE_LANGUAGE:CUDA>:--prec-div=false>"
+    "$<$<COMPILE_LANGUAGE:CUDA>:--prec-sqrt=false>"
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME})
