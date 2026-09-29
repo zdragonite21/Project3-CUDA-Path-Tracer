@@ -12,29 +12,29 @@ __device__ float MandelbulbSDF::operator()(vec3 p) const {
     float m = dot(w, w);
 
     // vec4 trap = vec4(abs(w), m);
-    float dz = 1.0;
+    float dz = 1.f;
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         // trigonometric version (MUCH faster than polynomial)
 
         // dz = 8*z^7*dz
-        dz = 8.0 * pow(m, 3.5) * dz + 1.0;
+        dz = 8.f * __powf(m, 3.5f) * dz + 1.f;
 
         // z = z^8+c
         float r = length(w);
-        float b = 8.0 * acos(w.y / r);
-        float a = 8.0 * atan(w.x, w.z);
-        w = p + powf(r, 8.0) * vec3(sin(b) * sin(a), cos(b), sin(b) * cos(a));
+        float b = 8.f * acosf(w.y / r);
+        float a = 8.f * atan(w.x, w.z);
+        w = p + __powf(r, 8.f) * vec3(__sinf(b) * __sinf(a), __cosf(b), __sinf(b) * __cosf(a));
 
         // trap = min(trap, vec4(abs(w), m));
 
         m = dot(w, w);
-        if (m > 256.0)
+        if (m > 256.f)
             break;
     }
 
     // resColor = vec4(m, trap.yzw);
 
     // distance estimation (through the Hubbard-Douady potential)
-    return 0.25 * log(m) * sqrt(m) / dz;
+    return 0.25f * __logf(m) * sqrtf(m) / dz;
 }
