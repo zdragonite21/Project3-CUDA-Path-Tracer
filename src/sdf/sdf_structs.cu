@@ -7,6 +7,52 @@ __device__ float SphereSDF::operator()(vec3 p) const {
     return length(p) - r;
 }
 
+__device__ __forceinline__ glm::vec3 calc_w(glm::vec3 w, const glm::vec3& p) {
+    float x = w.x;
+    float y = w.y;
+    float z = w.z;
+
+    float r2 = x * x + y * y + z * z;
+    if (r2 <= 1e-20f)
+        return p;
+
+    float inv_r = rsqrtf(r2);
+
+    // theta = acos(y / r)
+    float cos_theta = y * inv_r;
+    float sin_theta = sqrtf(fmaxf(0.0f, 1.0f - cos_theta * cos_theta));
+
+    // phi = atan2(x, z)
+    float rho2 = x * x + z * z;
+
+    float sin_phi;
+    float cos_phi;
+    if (rho2 > 0.00001f) {
+        float inv_rho = rsqrtf(rho2);
+        sin_phi = x * inv_rho;
+        cos_phi = z * inv_rho;
+    } else {
+        // undefined at the pole
+        sin_phi = 0.0f;
+        cos_phi = 1.0f;
+    }
+
+    // 8theta
+    double_angle(sin_theta, cos_theta);
+    double_angle(sin_theta, cos_theta);
+    double_angle(sin_theta, cos_theta);
+
+    // 8phi
+    double_angle(sin_phi, cos_phi);
+    double_angle(sin_phi, cos_phi);
+    double_angle(sin_phi, cos_phi);
+
+    float r4 = r2 * r2;
+    float r8 = r4 * r4;
+
+    return p + r8 * glm::vec3(sin_theta * sin_phi, cos_theta, sin_theta * cos_phi);
+}
+
 __device__ float MandelbulbSDF::operator()(vec3 p) const {
     vec3 w = p;
     float m = dot(w, w);
@@ -21,10 +67,7 @@ __device__ float MandelbulbSDF::operator()(vec3 p) const {
         dz = 8.f * __powf(m, 3.5f) * dz + 1.f;
 
         // z = z^8+c
-        float r = length(w);
-        float b = 8.f * acosf(w.y / r);
-        float a = 8.f * atan2f(w.x, w.z);
-        w = p + __powf(r, 8.f) * vec3(__sinf(b) * __sinf(a), __cosf(b), __sinf(b) * __cosf(a));
+        w = calc_w(w, p);
 
         // trap = min(trap, vec4(abs(w), m));
 
