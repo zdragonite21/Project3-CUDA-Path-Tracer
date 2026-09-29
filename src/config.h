@@ -16,4 +16,8 @@ constexpr float shadow_margin = 1e-3f;
 constexpr float sdf_hit = 1e-4f;
 constexpr float sdf_normal = 1e-4f;
 constexpr float min_cos = 1e-4f;
+} // namespace numeric
+
+namespace scene_params {
+constexpr int max_steps = 128;
 }

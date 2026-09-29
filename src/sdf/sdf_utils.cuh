@@ -3,7 +3,9 @@
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
 
+#include "../config.h"
 #include "../scene_structs.h"
+
 
 template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map, float eps) {
     const float e = 0.5773f * eps;
@@ -17,14 +19,12 @@ template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map, f
 
 template <typename Map>
 __device__ float trace_sdf(Ray r, Map map, float t_min, float t_max, float eps) {
-    const int MAX_STEPS = 128;
-
     float t = t_min;
     if (t > t_max) {
         return -1.f;
     }
-    
-    for (int i = 0; i < MAX_STEPS; i++) {
+
+    for (int i = 0; i < scene_params::max_steps; i++) {
         float d = map(r.org + r.dir * t);
         if (glm::abs(d) < eps)
             return t;
