@@ -17,9 +17,9 @@ __device__ float scene_intersect(Ray r, float t_min, float t_max, float eps) {
     if (t_min > t_max)
         return -1.f;
     
-    return trace_sdf<MandelbulbSDF>(r, MandelbulbSDF{}, t_min, t_max, eps);
+    return trace_sdf<MandelbulbDE>(r, MandelbulbDE{}, t_min, t_max, eps);
 }
 
 __device__ vec3 scene_normal(vec3 p, float eps) {
-    return calc_normal<MandelbulbSDF>(p, MandelbulbSDF{}, eps);
+    return calc_normal<MandelbulbDE>(p, MandelbulbDE{}, eps);
 }

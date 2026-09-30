@@ -1,10 +1,19 @@
 #include "sdf_structs.cuh"
+#include <glm/geometric.hpp>
 
 using namespace glm;
 
 __device__ float SphereSDF::operator()(vec3 p) const {
     const float r = 1.f;
     return length(p) - r;
+}
+
+__device__ inline void double_angle(float& s, float& c) {
+    float s2 = 2.f * s * c;
+    float c2 = c * c - s * s;
+
+    s = s2;
+    c = c2;
 }
 
 __device__ __forceinline__ glm::vec3 calc_w(glm::vec3 w, const glm::vec3& p) {
@@ -53,7 +62,7 @@ __device__ __forceinline__ glm::vec3 calc_w(glm::vec3 w, const glm::vec3& p) {
     return p + r8 * glm::vec3(sin_theta * sin_phi, cos_theta, sin_theta * cos_phi);
 }
 
-__device__ float MandelbulbSDF::operator()(vec3 p) const {
+__device__ float MandelbulbDE::operator()(vec3 p) const {
     vec3 w = p;
     float m = dot(w, w);
 

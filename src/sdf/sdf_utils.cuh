@@ -6,7 +6,6 @@
 #include "../config.h"
 #include "../scene_structs.h"
 
-
 template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map, float eps) {
     const float e = 0.5773f * eps;
     const glm::vec3 k1(e, -e, -e);
