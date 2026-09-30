@@ -8,7 +8,8 @@
 #include "scene_structs.h"
 #include "shading.cuh"
 #include "thrust_utils.h"
-#include "utilities.h"
+#include "gui_data.h"
+#include "math_utils.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -217,7 +218,7 @@ void pathtrace(uchar4* pbo, int iter) {
 
     while (num_paths > 0 && depth < trace_depth) {
         // tracing
-        dim3 num_blocks_path_segment_tracing = utility_core::divup(num_paths, block_size_1d);
+        dim3 num_blocks_path_segment_tracing = math_utils::divup(num_paths, block_size_1d);
         compute_intersections<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
             num_paths, dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections,
             dev_isect_mat_ids);
@@ -234,7 +235,7 @@ void pathtrace(uchar4* pbo, int iter) {
 
 #if LI_MIS
         int num_srays = num_paths;
-        dim3 num_blocks_srays = utility_core::divup(num_srays, block_size_1d);
+        dim3 num_blocks_srays = math_utils::divup(num_srays, block_size_1d);
         trace_shadow_rays<<<num_blocks_srays, block_size_1d, 0, pt_stream>>>(
             num_srays, hst_scene->geoms.size(), dev_shadow_rays, dev_geoms, dev_image);
         check_cuda_error("trace shadow rays");

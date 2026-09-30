@@ -1,5 +1,5 @@
 #include "sampling.cuh"
-#include "utilities.h"
+#include "math_utils.h"
 
 /**
  * Handy-dandy hash function that provides seeds for random number generation.

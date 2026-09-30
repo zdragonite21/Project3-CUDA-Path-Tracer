@@ -1,6 +1,7 @@
 #include "scene.h"
 
 #include "utilities.h"
+#include "math_utils.h"
 
 #include "json.hpp"
 #include <glm/gtc/matrix_inverse.hpp>

@@ -5,6 +5,7 @@
 //  A collection/kitchen sink of generally useful functions
 
 #include "utilities.h"
+#include "math_utils.h"
 
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -14,18 +15,6 @@
 
 #include <cstdio>
 #include <iostream>
-
-int utility_core::divup(int x, int n) { return (x + n - 1) / n; }
-
-float utility_core::clamp(float f, float min, float max) {
-    if (f < min) {
-        return min;
-    } else if (f > max) {
-        return max;
-    } else {
-        return f;
-    }
-}
 
 bool utility_core::replace_string(std::string &str, const std::string &from,
                                 const std::string &to) {

@@ -2,6 +2,15 @@
 
 #include "scene_structs.h"
 #include <vector>
+#include <string>
+
+struct RenderState {
+    Camera camera;
+    unsigned int iterations;
+    int trace_depth;
+    std::vector<glm::vec3> image;
+    std::string image_name;
+};
 
 struct EnvironmentMap {
     int width = 0;

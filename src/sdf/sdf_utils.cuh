@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include <glm/glm.hpp>
+#include <glm/common.hpp>
+#include <glm/geometric.hpp>
+#include <glm/vec3.hpp>
 
 #include "../config.h"
 #include "../scene_structs.h"

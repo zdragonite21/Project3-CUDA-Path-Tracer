@@ -1,7 +1,7 @@
 #include "bsdf.cuh"
 #include "bxdf_utils.cuh"
 #include "sampling.cuh"
-#include "utilities.h"
+#include "math_utils.h"
 
 #include <cmath>
 

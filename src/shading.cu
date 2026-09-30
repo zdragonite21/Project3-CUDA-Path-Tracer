@@ -6,7 +6,7 @@
 #include "sampling.cuh"
 #include "scene_structs.h"
 #include "shading.cuh"
-#include "utilities.h"
+#include "math_utils.h"
 #include <corecrt_terminate.h>
 
 __device__ inline float power_heuristic(float pdf_a, float pdf_b) {

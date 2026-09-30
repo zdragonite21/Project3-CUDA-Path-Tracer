@@ -2,9 +2,10 @@
 
 #include <cuda_runtime.h>
 
-#include <glm/glm.hpp>
-#include <string>
-#include <vector>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
@@ -73,14 +74,6 @@ struct Camera {
     glm::vec2 pixel_length;
     float lens_radius;
     float focal_distance;
-};
-
-struct RenderState {
-    Camera camera;
-    unsigned int iterations;
-    int trace_depth;
-    std::vector<glm::vec3> image;
-    std::string image_name;
 };
 
 struct DeviceEnvMap {

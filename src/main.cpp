@@ -3,7 +3,9 @@
 #include "pathtrace.h"
 #include "scene.h"
 #include "scene_structs.h"
+#include "gui_data.h"
 #include "utilities.h"
+#include "math_utils.h"
 
 #include <cstddef>
 #include <cuda_runtime_api.h>

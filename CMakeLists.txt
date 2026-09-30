@@ -69,6 +69,8 @@ set(headers
     src/sdf/sdf_scene.cuh
     src/sdf/sdf_structs.cuh
     src/sdf/sdf_utils.cuh
+    src/gui_data.h
+    src/math_utils.h
 )
 
 set(sources
