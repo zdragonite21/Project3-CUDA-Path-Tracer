@@ -69,9 +69,10 @@ set(headers
     src/sdf/sdf_scene.cuh
     src/sdf/sdf_structs.cuh
     src/sdf/sdf_utils.cuh
-    src/gui_data.h
     src/math_utils.h
     src/camera.h
+    src/gui.h
+    src/gui_data.h
 )
 
 set(sources
@@ -93,6 +94,7 @@ set(sources
     src/sdf/sdf_structs.cu
     src/sdf/sdf_utils.cu
     src/camera.cpp
+    src/gui.cpp
 )
 
 set(imgui_headers

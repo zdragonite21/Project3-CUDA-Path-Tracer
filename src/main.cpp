@@ -3,10 +3,9 @@
 #include "pathtrace.h"
 #include "scene.h"
 #include "camera.h"
-#include "scene_structs.h"
 #include "gui_data.h"
+#include "gui.h"
 #include "utilities.h"
-#include "math_utils.h"
 
 #include <cstddef>
 #include <cuda_runtime_api.h>
@@ -14,9 +13,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -37,7 +34,7 @@ static double last_y;
 static double last_time;
 static constexpr float MAX_FRAME_DT = 0.12f;
 
-static bool camchanged = true;
+static bool needs_reset = true;
 
 Camera camera;
 Camera og_camera;
@@ -59,7 +56,6 @@ cudaGraphicsResource_t cuda_pixel_resource;
 
 GLFWwindow* window;
 GuiDataContainer* imgui_data = NULL;
-ImGuiIO* io = nullptr;
 bool mouse_over_imgui_window = false;
 
 // Forward declarations for window loop and interactivity
@@ -173,6 +169,8 @@ void init_pbo() {
     // Allocate data for the buffer. 4-channel 8-bit image
     glBufferData(GL_PIXEL_UNPACK_BUFFER, texture_data_size, NULL, GL_DYNAMIC_COPY);
     cudaGraphicsGLRegisterBuffer(&cuda_pixel_resource, pbo, cudaGraphicsRegisterFlagsWriteDiscard);
+
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 }
 
 void error_callback(int error, const char* description) {
@@ -203,16 +201,10 @@ bool init() {
         return false;
     }
     printf("Opengl Version:%s\n", glGetString(GL_VERSION));
+
     // Set up ImGui
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    io = &ImGui::GetIO();
-    (void)io;
-    ImGui::StyleColorsLight();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 120");
-
+    gui::init(window);
+    
     // Initialize other stuff
     init_vao();
     init_textures();
@@ -231,44 +223,7 @@ void init_imgui_data(GuiDataContainer* gui_data) {
 }
 
 // LOOK: Un-Comment to check ImGui Usage
-void render_imgui() {
-    mouse_over_imgui_window = io->WantCaptureMouse;
 
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    static float f = 0.0f;
-    static int counter = 0;
-
-    ImGui::Begin(
-        "Path Tracer Analytics"); // Create a window called "Hello, world!" and append into it.
-
-    // LOOK: Un-Comment to check the output window and usage
-    // ImGui::Text("This is some useful text.");               // Display some text (you can use a
-    // format strings too) ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools
-    // storing our window open/close state ImGui::Checkbox("Another Window", &show_another_window);
-
-    // ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from
-    // 0.0f to 1.0f ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats
-    // representing a color
-
-    // if (ImGui::Button("Button"))                            // Buttons return true when clicked
-    // (most widgets return true when edited/activated)
-    //     counter++;
-    // ImGui::SameLine();
-    // ImGui::Text("counter = %d", counter);
-    ImGui::Text("Traced Depth %d", imgui_data->traced_depth);
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
-                ImGui::GetIO().Framerate);
-    ImGui::End();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
 
 bool is_mouse_over_imgui_window() {
     return mouse_over_imgui_window;
@@ -310,27 +265,29 @@ void main_loop() {
         double now = glfwGetTime();
         float dt = glm::min((float)(now - last_time), MAX_FRAME_DT);
         last_time = now;
-        camchanged |= camera_controller.update_camera(camera, dt);
 
+        gui::begin_frame(mouse_over_imgui_window);
+        GuiRefs refs{&camera, &og_camera, scene, gui_data, iteration};
+        needs_reset |= gui::render_imgui(refs);
+        needs_reset |= camera_controller.update_camera(camera, dt);
+        
         run_cuda();
-
+        
         std::string title =
-            "CIS565 Path Tracer | " + utility_core::convert_int_to_string(iteration) + " Iterations";
+        "CIS565 Path Tracer | " + utility_core::convert_int_to_string(iteration) + " Iterations";
         glfwSetWindowTitle(window, title.c_str());
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
         glBindTexture(GL_TEXTURE_2D, display_image);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glClear(GL_COLOR_BUFFER_BIT);
-
+        
         // Binding GL_PIXEL_UNPACK_BUFFER back to default
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
+        
         // VAO, shader program, and texture already bound
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-
-        // Render ImGui Stuff
-        render_imgui();
-
+        
+        gui::end_frame();
         glfwSwapBuffers(window);
     }
 
@@ -340,9 +297,7 @@ void main_loop() {
     cleanup_cuda();
     cudaDeviceReset();
 
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    gui::shutdown();
 
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -396,11 +351,11 @@ int main(int argc, char** argv) {
 void reset_accumulation() {
     iteration = 0;
     camera.write_data(render_state->camera);
-    camchanged = false;
+    needs_reset = false;
 }
 
 void run_cuda() {
-    if (camchanged) {
+    if (needs_reset) {
         reset_accumulation();
         pathtrace_reset(scene);
     }
@@ -443,7 +398,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             break;
         case GLFW_KEY_SPACE:
             camera = og_camera;
-            camchanged = true;
+            needs_reset = true;
             break;
         }
     }
