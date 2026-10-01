@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include "config.h"
 #include "utilities.h"
 #include "math_utils.h"
 
@@ -152,7 +153,8 @@ void Scene::load_from_json(const std::string& json_name) {
     camera.lens_radius = camera_data["LENSRADIUS"];
     camera.focal_distance = camera_data["FOCALDISTANCE"];
     state.iterations = camera_data["ITERATIONS"];
-    state.trace_depth = camera_data["DEPTH"];
+    state.settings = default_render_settings;
+    state.settings.max_depth = camera_data["DEPTH"];
     state.image_name = camera_data["FILE"];
     const auto& pos = camera_data["EYE"];
     const auto& lookat = camera_data["LOOKAT"];

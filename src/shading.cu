@@ -8,6 +8,7 @@
 #include "shading.cuh"
 #include "math_utils.h"
 #include <corecrt_terminate.h>
+#include "render_settings.cuh"
 
 __device__ inline float power_heuristic(float pdf_a, float pdf_b) {
     float a2 = pdf_a * pdf_a;
@@ -37,7 +38,7 @@ __device__ glm::vec3 eval_environment(const DeviceEnvMap& env, glm::vec3 wi) {
     float v = theta / PI;
 
     float4 rgb = tex2D<float4>(env.texture, u, v);
-    return env.strength * glm::vec3(rgb.x, rgb.y, rgb.z);
+    return c_settings.env_strength * glm::vec3(rgb.x, rgb.y, rgb.z);
 }
 
 __device__ cstd::optional<ShadowRay>

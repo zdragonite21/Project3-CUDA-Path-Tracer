@@ -1,4 +1,5 @@
 #pragma once
+#include "render_settings.h"
 
 #define ERRORCHECK 0
 
@@ -7,8 +8,6 @@
 
 #define LI_MIS 1
 #define RUSSIAN_ROULETTE 1
-
-#define AGX_TONEMAP 1
 
 namespace numeric {
 constexpr float ray_offset = 1e-3f;
@@ -21,3 +20,7 @@ constexpr float min_cos = 1e-4f;
 namespace scene_params {
 constexpr int max_steps = 128;
 }
+
+constexpr RenderSettings default_render_settings{
+    8, 128, 1e-4f, 1e-4f, 1.f, true,
+};

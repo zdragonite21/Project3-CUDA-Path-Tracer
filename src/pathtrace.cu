@@ -2,14 +2,15 @@
 
 #include "config.h"
 #include "display.cuh"
+#include "gui_data.h"
 #include "intersections.cuh"
+#include "math_utils.h"
+#include "render_settings.cuh"
 #include "sampling.cuh"
 #include "scene.h"
 #include "scene_structs.h"
 #include "shading.cuh"
 #include "thrust_utils.h"
-#include "gui_data.h"
-#include "math_utils.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -39,7 +40,7 @@ void check_cuda_error_fn(const char* msg, const char* file, int line) {
 #endif // ERRORCHECK
 }
 
-static Scene* hst_scene = NULL;
+static Scene* host_scene = NULL;
 static GuiDataContainer* gui_data = NULL;
 static glm::vec3* dev_image = NULL;
 static Geom* dev_geoms = NULL;
@@ -53,6 +54,11 @@ static cudaArray_t env_array = NULL;
 static DeviceEnvMap device_env{};
 
 cudaStream_t pt_stream;
+
+__constant__ RenderSettings c_settings;
+void upload_settings(const RenderSettings& s) {
+    cudaMemcpyToSymbolAsync(c_settings, &s, sizeof(s), 0, cudaMemcpyHostToDevice, pt_stream);
+}
 
 void init_data_container(GuiDataContainer* imgui_data) {
     gui_data = imgui_data;
@@ -109,9 +115,10 @@ void pathtrace_init(Scene* scene) {
 }
 
 void pathtrace_reset(Scene* scene) {
-    hst_scene = scene;
+    host_scene = scene;
+    upload_settings(scene->state.settings);
 
-    const CameraData& cam = hst_scene->state.camera;
+    const CameraData& cam = host_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
 
     cudaMemset(dev_image, 0, num_pixels * sizeof(glm::vec3));
@@ -196,8 +203,8 @@ __global__ void gen_ray_from_cam(CameraData cam, int iter, int trace_depth,
  * nor) / pdf(wi))
  */
 void pathtrace(uchar4* pbo, int iter) {
-    const int trace_depth = hst_scene->state.trace_depth;
-    const CameraData& cam = hst_scene->state.camera;
+    const int trace_depth = host_scene->state.settings.max_depth;
+    const CameraData& cam = host_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
 
     // 2D block for generating ray from camera
@@ -220,7 +227,7 @@ void pathtrace(uchar4* pbo, int iter) {
         // tracing
         dim3 num_blocks_path_segment_tracing = math_utils::divup(num_paths, block_size_1d);
         compute_intersections<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
-            num_paths, dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections,
+            num_paths, dev_paths, dev_geoms, host_scene->geoms.size(), dev_intersections,
             dev_isect_mat_ids);
         check_cuda_error("trace one bounce");
 
@@ -228,7 +235,7 @@ void pathtrace(uchar4* pbo, int iter) {
         sort_paths(num_paths, dev_intersections, dev_isect_mat_ids, dev_paths, pt_stream);
 #endif
         shade_material<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
-            iter, num_paths, depth, hst_scene->lights.size(), hst_scene->geoms.size(),
+            iter, num_paths, depth, host_scene->lights.size(), host_scene->geoms.size(),
             dev_intersections, dev_isect_mat_ids, dev_paths, dev_shadow_rays, dev_materials,
             dev_lights, dev_geoms, dev_image, device_env);
         check_cuda_error("shader material");
@@ -237,7 +244,7 @@ void pathtrace(uchar4* pbo, int iter) {
         int num_srays = num_paths;
         dim3 num_blocks_srays = math_utils::divup(num_srays, block_size_1d);
         trace_shadow_rays<<<num_blocks_srays, block_size_1d, 0, pt_stream>>>(
-            num_srays, hst_scene->geoms.size(), dev_shadow_rays, dev_geoms, dev_image);
+            num_srays, host_scene->geoms.size(), dev_shadow_rays, dev_geoms, dev_image);
         check_cuda_error("trace shadow rays");
 #endif
 
@@ -259,14 +266,14 @@ void pathtrace(uchar4* pbo, int iter) {
     ///////////////////////////////////////////////////////////////////////////
 
     // Send results to OpenGL buffer for rendering
-    send_image_to_pbo<<<blocks_per_grid_2d, block_size_2d, 0, pt_stream>>>(pbo, cam.resolution,
-                                                                           iter, dev_image);
+    send_image_to_pbo<<<blocks_per_grid_2d, block_size_2d, 0, pt_stream>>>(
+        pbo, cam.resolution, iter, dev_image, host_scene->state.settings.agx);
     check_cuda_error("pathtrace");
 }
 
 void copy_image_to_host() {
-    const CameraData& cam = hst_scene->state.camera;
+    const CameraData& cam = host_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
-    cudaMemcpy(hst_scene->state.image.data(), dev_image, num_pixels * sizeof(glm::vec3),
+    cudaMemcpy(host_scene->state.image.data(), dev_image, num_pixels * sizeof(glm::vec3),
                cudaMemcpyDeviceToHost);
 }

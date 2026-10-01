@@ -16,12 +16,12 @@ void Image::set_pixel(int x, int y, const glm::vec3& pixel) {
     pixels[(y * width) + x] = pixel;
 }
 
-void Image::save_png(const std::string& base_filename) {
+void Image::save_png(const std::string& base_filename, bool tonemap) {
     unsigned char* bytes = new unsigned char[3 * width * height];
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int i = y * width + x;
-            glm::vec3 pix = to_display(pixels[i]);
+            glm::vec3 pix = to_display(pixels[i], tonemap);
             bytes[3 * i + 0] = (unsigned char)pix.x;
             bytes[3 * i + 1] = (unsigned char)pix.y;
             bytes[3 * i + 2] = (unsigned char)pix.z;
@@ -29,7 +29,7 @@ void Image::save_png(const std::string& base_filename) {
     }
 
     std::string filename = base_filename + ".png";
-    std::string file_path = "renders/" + filename;
+    std::string file_path = filename;
     stbi_write_png(file_path.c_str(), width, height, 3, bytes, width * 3);
     std::cout << "Saved " << filename << "." << std::endl;
 

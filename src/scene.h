@@ -1,16 +1,17 @@
 #pragma once
 
 #include "camera.h"
+#include "render_settings.h"
 #include "scene_structs.h"
-#include <vector>
 #include <string>
+#include <vector>
 
 struct RenderState {
     CameraData camera;
     unsigned int iterations;
-    int trace_depth;
     std::vector<glm::vec3> image;
     std::string image_name;
+    RenderSettings settings;
 };
 
 struct EnvironmentMap {
@@ -21,12 +22,12 @@ struct EnvironmentMap {
     std::vector<glm::vec3> pixels;
 };
 
-class Scene
-{
+class Scene {
   private:
     void load_hdri_pixels(const std::string& json_name, const std::string& hdri_path);
     void load_from_json(const std::string& json_name);
-public:
+
+  public:
     Scene(std::string filename);
 
     std::vector<Geom> geoms;

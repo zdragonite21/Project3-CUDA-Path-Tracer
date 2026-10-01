@@ -1,4 +1,3 @@
-#include "config.h"
 #include "display.cuh"
 
 __host__ __device__ glm::vec3 pow_components(glm::vec3 base, glm::vec3 exponent) {
@@ -27,7 +26,8 @@ __host__ __device__ glm::vec3 to_linear(glm::vec3 sRGB) {
 
 __host__ __device__ glm::vec3 from_linear(glm::vec3 linearRGB) {
     glm::bvec3 cutoff = glm::lessThan(linearRGB, glm::vec3(0.0031308f));
-    glm::vec3 higher = 1.055f * pow_components(linearRGB, glm::vec3(1.f / 2.4f)) - glm::vec3(0.055f);
+    glm::vec3 higher =
+        1.055f * pow_components(linearRGB, glm::vec3(1.f / 2.4f)) - glm::vec3(0.055f);
     glm::vec3 lower = linearRGB * 12.92f;
     return glm::mix(higher, lower, cutoff);
 }
@@ -52,7 +52,8 @@ __host__ __device__ glm::vec3 agx_curve3(glm::vec3 v) {
     glm::vec3 c = glm::vec3(c_up) + (c_down - c_up) * mask;
     return glm::vec3(0.5f) +
            (glm::vec3(-2.f * threshold) + 2.f * v) *
-               pow_components(glm::vec3(1.f) + a * pow_components(glm::abs(v - glm::vec3(threshold)), b), c);
+               pow_components(
+                   glm::vec3(1.f) + a * pow_components(glm::abs(v - glm::vec3(threshold)), b), c);
 }
 
 __host__ __device__ glm::vec3 agx_tonemapping(glm::vec3 ci) {
@@ -69,25 +70,22 @@ __host__ __device__ glm::vec3 agx_tonemapping(glm::vec3 ci) {
 
     ci = agx_mat * ci;
     glm::vec3 log_ci(log2f(ci.x), log2f(ci.y), log2f(ci.z));
-    glm::vec3 ct =
-        saturate(log_ci * (1.f / dynamic_range) - glm::vec3(min_ev / dynamic_range));
+    glm::vec3 ct = saturate(log_ci * (1.f / dynamic_range) - glm::vec3(min_ev / dynamic_range));
     glm::vec3 co = agx_curve3(ct);
     co = agx_mat_inv * co;
     return co;
 }
 
-__host__ __device__ glm::ivec3 to_display(glm::vec3 linear_rgb) {
-#if AGX_TONEMAP
-    glm::vec3 color = saturate(agx_tonemapping(linear_rgb));
-#else
-    glm::vec3 color = from_linear(saturate(linear_rgb));
-#endif
+__host__ __device__ glm::ivec3 to_display(glm::vec3 linear_rgb, bool agx_tonemap) {
+    glm::vec3 color =
+        agx_tonemap ? saturate(agx_tonemapping(linear_rgb)) : from_linear(saturate(linear_rgb));
+
     glm::ivec3 icolor = glm::clamp(glm::ivec3(color * 255.f), 0, 255);
     return icolor;
 }
 
 // Kernel that writes the image to the OpenGL PBO directly.
-__global__ void send_image_to_pbo(uchar4* pbo, glm::ivec2 resolution, int iter, glm::vec3* image) {
+__global__ void send_image_to_pbo(uchar4* pbo, glm::ivec2 resolution, int iter, glm::vec3* image, bool agx_tonemap) {
     if (iter == 0) {
         return;
     }
@@ -98,7 +96,7 @@ __global__ void send_image_to_pbo(uchar4* pbo, glm::ivec2 resolution, int iter, 
     if (x < resolution.x && y < resolution.y) {
         int index = x + (y * resolution.x);
         glm::vec3 color = image[index] / static_cast<float>(iter);
-        glm::ivec3 icolor = to_display(color);
+        glm::ivec3 icolor = to_display(color, agx_tonemap);
 
         // Each thread writes one pixel location in the texture (textel)
         pbo[index].w = 0;

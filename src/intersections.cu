@@ -2,6 +2,7 @@
 #include "intersections.cuh"
 #include "scene_structs.h"
 #include "sdf/sdf_scene.cuh"
+#include "render_settings.cuh"
 
 #include <cfloat>
 
@@ -150,7 +151,7 @@ __device__ float sdf_intersection_test(const Geom& sdf, Ray r, float t_max,
     float inv_rd_len = 1.f / rd_len;
     glm::vec3 rd = rd_obj * inv_rd_len;
 
-    float s = scene_intersect(Ray{ro, rd}, 0.f, t_max * rd_len, numeric::sdf_hit * rd_len);
+    float s = scene_intersect(Ray{ro, rd}, 0.f, t_max * rd_len, c_settings.sdf_hit_eps * rd_len);
     if (s <= 0.0f)
         return -1.0f;
 
@@ -161,7 +162,7 @@ __device__ float sdf_intersection_test(const Geom& sdf, Ray r, float t_max,
     }
     if (normal || back_facing) {
         glm::vec3 p = ro + rd * s;
-        glm::vec3 nor = scene_normal(p, numeric::sdf_normal * rd_len);
+        glm::vec3 nor = scene_normal(p, c_settings.sdf_normal_eps * rd_len);
         if (back_facing) {
             *back_facing = glm::dot(rd, nor) > 0.f;
         }

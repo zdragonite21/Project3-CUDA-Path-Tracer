@@ -5,8 +5,8 @@
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
-#include "../config.h"
 #include "../scene_structs.h"
+#include "../render_settings.cuh"
 
 template <typename Map> __device__ glm::vec3 calc_normal(glm::vec3 p, Map map, float eps) {
     const float e = 0.5773f * eps;
@@ -25,7 +25,7 @@ __device__ float trace_sdf(Ray r, Map map, float t_min, float t_max, float eps) 
         return -1.f;
     }
 
-    for (int i = 0; i < scene_params::max_steps; i++) {
+    for (int i = 0; i < c_settings.sdf_max_steps; i++) {
         float d = map(r.org + r.dir * t);
         if (glm::abs(d) < eps)
             return t;

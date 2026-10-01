@@ -73,6 +73,8 @@ set(headers
     src/camera.h
     src/gui.h
     src/gui_data.h
+    src/render_settings.cuh
+    src/render_settings.h
 )
 
 set(sources

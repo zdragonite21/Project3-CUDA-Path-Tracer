@@ -1,18 +1,18 @@
+#include "camera.h"
 #include "glsl_utility.hpp"
+#include "gui.h"
+#include "gui_data.h"
 #include "image.h"
 #include "pathtrace.h"
 #include "scene.h"
-#include "camera.h"
-#include "gui_data.h"
-#include "gui.h"
 #include "utilities.h"
+
 
 #include <cstddef>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -204,7 +204,7 @@ bool init() {
 
     // Set up ImGui
     gui::init(window);
-    
+
     // Initialize other stuff
     init_vao();
     init_textures();
@@ -222,14 +222,11 @@ void init_imgui_data(GuiDataContainer* gui_data) {
     imgui_data = gui_data;
 }
 
-// LOOK: Un-Comment to check ImGui Usage
-
-
 bool is_mouse_over_imgui_window() {
     return mouse_over_imgui_window;
 }
 
-void save_image() {
+void save_image(bool on_exit) {
     copy_image_to_host();
 
     float samples = iteration;
@@ -250,7 +247,8 @@ void save_image() {
     filename = ss.str();
 
     // CHECKITOUT
-    img.save_png(filename);
+    std::string dir = (on_exit ? "renders" : "saves") + std::string("/");
+    img.save_png(dir + filename, scene->state.settings.agx);
     // img.save_hdr(filename);  // Save a Radiance HDR file
 }
 
@@ -270,28 +268,28 @@ void main_loop() {
         GuiRefs refs{&camera, &og_camera, scene, gui_data, iteration};
         needs_reset |= gui::render_imgui(refs);
         needs_reset |= camera_controller.update_camera(camera, dt);
-        
+
         run_cuda();
-        
-        std::string title =
-        "CIS565 Path Tracer | " + utility_core::convert_int_to_string(iteration) + " Iterations";
+
+        std::string title = "CIS565 Path Tracer | " +
+                            utility_core::convert_int_to_string(iteration) + " Iterations";
         glfwSetWindowTitle(window, title.c_str());
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
         glBindTexture(GL_TEXTURE_2D, display_image);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glClear(GL_COLOR_BUFFER_BIT);
-        
+
         // Binding GL_PIXEL_UNPACK_BUFFER back to default
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-        
+
         // VAO, shader program, and texture already bound
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-        
+
         gui::end_frame();
         glfwSwapBuffers(window);
     }
 
-    save_image();
+    save_image(true);
 
     pathtrace_free();
     cleanup_cuda();
@@ -394,7 +392,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             glfwSetWindowShouldClose(window, GL_TRUE);
             break;
         case GLFW_KEY_S:
-            save_image();
+            save_image(false);
             break;
         case GLFW_KEY_SPACE:
             camera = og_camera;
@@ -405,7 +403,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (button != GLFW_MOUSE_BUTTON_RIGHT || (action == GLFW_PRESS && is_mouse_over_imgui_window())) {
+    if (button != GLFW_MOUSE_BUTTON_RIGHT ||
+        (action == GLFW_PRESS && is_mouse_over_imgui_window())) {
         return;
     }
 

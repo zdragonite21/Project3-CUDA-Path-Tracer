@@ -1,9 +1,21 @@
 #include "gui.h"
 #include "gui_data.h"
-#include "camera.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "render_settings.h"
+#include "scene.h"
+#include <cmath>
+#include <cstdio>
+
+static bool slider_log10(const char* label, float* v, float exp_min, float exp_max) {
+    float e = std::log10(*v);
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%.2e", *v);
+    if (!ImGui::SliderFloat(label, &e, exp_min, exp_max, buf)) return false;
+    *v = std::pow(10.f, e);
+    return true;
+}
 
 void gui::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -13,7 +25,7 @@ void gui::init(GLFWwindow* window) {
     ImGui_ImplOpenGL3_Init("#version 120");
 }
 
-void gui::begin_frame(bool &mouse_over_imgui_window) {
+void gui::begin_frame(bool& mouse_over_imgui_window) {
     mouse_over_imgui_window = ImGui::GetIO().WantCaptureMouse;
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -22,11 +34,21 @@ void gui::begin_frame(bool &mouse_over_imgui_window) {
 }
 
 bool gui::render_imgui(GuiRefs& refs) {
-    bool needs_reset = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    GuiDataContainer& d = *refs.data;
+    RenderSettings& s = refs.scene->state.settings;
+    bool reset = false;
+
+    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 
     ImGui::Begin(
         "Path Tracer Analytics"); // Create a window called "Hello, world!" and append into it.
+
+    reset |= ImGui::SliderInt("max depth", &s.max_depth, 1, 64);
+    reset |= ImGui::SliderInt("max steps", &s.sdf_max_steps, 1, 512);
+    reset |= slider_log10("sdf hit eps", &s.sdf_hit_eps, -6.f, -1.f);
+    reset |= slider_log10("sdf normal eps", &s.sdf_normal_eps, -6.f, -1.f);
+    reset |= ImGui::SliderFloat("env strength", &s.env_strength, 0.f, 10.f);
+    ImGui::Checkbox("agx tonemapping", &s.agx);
 
     // LOOK: Un-Comment to check the output window and usage
     // ImGui::Text("This is some useful text.");               // Display some text (you can use a
@@ -47,7 +69,7 @@ bool gui::render_imgui(GuiRefs& refs) {
                 ImGui::GetIO().Framerate);
     ImGui::End();
 
-    return needs_reset;
+    return reset;
 }
 
 void gui::end_frame() {
