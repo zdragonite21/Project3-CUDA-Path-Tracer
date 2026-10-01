@@ -5,17 +5,6 @@
 #include "imgui_impl_opengl3.h"
 #include "render_settings.h"
 #include "scene.h"
-#include <cmath>
-#include <cstdio>
-
-static bool slider_log10(const char* label, float* v, float exp_min, float exp_max) {
-    float e = std::log10(*v);
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%.2e", *v);
-    if (!ImGui::SliderFloat(label, &e, exp_min, exp_max, buf)) return false;
-    *v = std::pow(10.f, e);
-    return true;
-}
 
 void gui::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -45,8 +34,10 @@ bool gui::render_imgui(GuiRefs& refs) {
 
     reset |= ImGui::SliderInt("max depth", &s.max_depth, 1, 64);
     reset |= ImGui::SliderInt("max steps", &s.sdf_max_steps, 1, 512);
-    reset |= slider_log10("sdf hit eps", &s.sdf_hit_eps, -6.f, -1.f);
-    reset |= slider_log10("sdf normal eps", &s.sdf_normal_eps, -6.f, -1.f);
+    reset |= ImGui::SliderFloat("sdf hit eps", &s.sdf_hit_eps, 1e-6f, 1e-1f, "%.6f",
+                                ImGuiSliderFlags_Logarithmic);
+    reset |= ImGui::SliderFloat("sdf normal eps", &s.sdf_normal_eps, 1e-6f, 1e-1f, "%.6f",
+                                ImGuiSliderFlags_Logarithmic);
     reset |= ImGui::SliderFloat("env strength", &s.env_strength, 0.f, 10.f);
     ImGui::Checkbox("agx tonemapping", &s.agx);
 
