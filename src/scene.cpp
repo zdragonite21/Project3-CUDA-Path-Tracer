@@ -144,7 +144,7 @@ void Scene::load_from_json(const std::string& json_name) {
         geoms.push_back(new_geom);
     }
     const auto& camera_data = data["Camera"];
-    Camera& camera = state.camera;
+    CameraData& camera = state.camera;
     RenderState& state = this->state;
     camera.resolution.x = camera_data["RES"][0];
     camera.resolution.y = camera_data["RES"][1];

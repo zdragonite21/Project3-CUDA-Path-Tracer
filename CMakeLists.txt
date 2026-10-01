@@ -71,6 +71,7 @@ set(headers
     src/sdf/sdf_utils.cuh
     src/gui_data.h
     src/math_utils.h
+    src/camera.h
 )
 
 set(sources
@@ -91,6 +92,7 @@ set(sources
     src/sdf/sdf_scene.cu
     src/sdf/sdf_structs.cu
     src/sdf/sdf_utils.cu
+    src/camera.cpp
 )
 
 set(imgui_headers
@@ -137,6 +139,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 )
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES native)
+
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF)
+set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2")
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>")
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CUDA>>:--split-compile=0;-lineinfo;-src-in-ptx>;")

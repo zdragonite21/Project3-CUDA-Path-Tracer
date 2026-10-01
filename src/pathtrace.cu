@@ -59,7 +59,7 @@ void init_data_container(GuiDataContainer* imgui_data) {
 }
 
 void pathtrace_init(Scene* scene) {
-    const Camera& cam = scene->state.camera;
+    const CameraData& cam = scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
 
     cudaMalloc(&dev_image, num_pixels * sizeof(glm::vec3));
@@ -111,7 +111,7 @@ void pathtrace_init(Scene* scene) {
 void pathtrace_reset(Scene* scene) {
     hst_scene = scene;
 
-    const Camera& cam = hst_scene->state.camera;
+    const CameraData& cam = hst_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
 
     cudaMemset(dev_image, 0, num_pixels * sizeof(glm::vec3));
@@ -151,7 +151,7 @@ void pathtrace_free() {
     check_cuda_error("pathtrace_free");
 }
 
-__global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
+__global__ void gen_ray_from_cam(CameraData cam, int iter, int trace_depth,
                                  PathSegment* path_segments) {
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -197,7 +197,7 @@ __global__ void gen_ray_from_cam(Camera cam, int iter, int trace_depth,
  */
 void pathtrace(uchar4* pbo, int iter) {
     const int trace_depth = hst_scene->state.trace_depth;
-    const Camera& cam = hst_scene->state.camera;
+    const CameraData& cam = hst_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
 
     // 2D block for generating ray from camera
@@ -265,7 +265,7 @@ void pathtrace(uchar4* pbo, int iter) {
 }
 
 void copy_image_to_host() {
-    const Camera& cam = hst_scene->state.camera;
+    const CameraData& cam = hst_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
     cudaMemcpy(hst_scene->state.image.data(), dev_image, num_pixels * sizeof(glm::vec3),
                cudaMemcpyDeviceToHost);

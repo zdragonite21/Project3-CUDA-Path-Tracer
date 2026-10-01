@@ -2,6 +2,7 @@
 #include "image.h"
 #include "pathtrace.h"
 #include "scene.h"
+#include "camera.h"
 #include "scene_structs.h"
 #include "gui_data.h"
 #include "utilities.h"
@@ -31,19 +32,16 @@
 static std::string start_time_string;
 
 // For camera controls
-static bool left_mouse_pressed = false;
-static bool right_mouse_pressed = false;
-static bool middle_mouse_pressed = false;
 static double last_x;
 static double last_y;
+static double last_time;
+static constexpr float MAX_FRAME_DT = 0.12f;
 
 static bool camchanged = true;
-static float dtheta = 0, dphi = 0;
-static glm::vec3 cammove;
 
-float zoom, theta, phi;
-glm::vec3 camera_position;
-glm::vec3 og_look_at; // for recentering the camera
+Camera camera;
+Camera og_camera;
+CameraController camera_controller;
 
 Scene* scene;
 GuiDataContainer* gui_data;
@@ -69,6 +67,7 @@ void run_cuda();
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_position_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 std::string current_time_string() {
     time_t now;
@@ -196,6 +195,7 @@ bool init() {
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     // Set up GL context
     glewExperimental = GL_TRUE;
@@ -303,8 +303,14 @@ void main_loop() {
     pathtrace_init(scene);
     pathtrace_reset(scene);
 
+    last_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        double now = glfwGetTime();
+        float dt = glm::min((float)(now - last_time), MAX_FRAME_DT);
+        last_time = now;
+        camchanged |= camera_controller.update_camera(camera, dt);
 
         run_cuda();
 
@@ -365,25 +371,14 @@ int main(int argc, char** argv) {
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
     render_state = &scene->state;
-    Camera& cam = render_state->camera;
+    const CameraData& cam = render_state->camera;
     width = cam.resolution.x;
     height = cam.resolution.y;
 
-    glm::vec3 view = cam.view;
-    glm::vec3 up = cam.up;
-    glm::vec3 right = glm::cross(view, up);
-    up = glm::cross(right, view);
-
-    camera_position = cam.position;
-
-    // compute phi (horizontal) and theta (vertical) relative 3D axis
-    // so, (0 0 1) is forward, (0 1 0) is up
-    glm::vec3 view_xz = glm::vec3(view.x, 0.0f, view.z);
-    glm::vec3 view_zy = glm::vec3(0.0f, view.y, view.z);
-    phi = glm::acos(glm::dot(glm::normalize(view_xz), glm::vec3(0, 0, -1)));
-    theta = glm::acos(glm::dot(glm::normalize(view_zy), glm::vec3(0, 1, 0)));
-    og_look_at = cam.look_at;
-    zoom = glm::length(cam.position - og_look_at);
+    camera.position = cam.position;
+    camera.yaw = glm::atan(-cam.view.x, -cam.view.z);
+    camera.pitch = glm::asin(cam.view.y);
+    og_camera = camera;
 
     // Initialize CUDA and GL components
     init();
@@ -400,21 +395,7 @@ int main(int argc, char** argv) {
 
 void reset_accumulation() {
     iteration = 0;
-    Camera& cam = render_state->camera;
-    camera_position.x = zoom * sin(phi) * sin(theta);
-    camera_position.y = zoom * cos(theta);
-    camera_position.z = zoom * cos(phi) * sin(theta);
-
-    cam.view = -glm::normalize(camera_position);
-    glm::vec3 v = cam.view;
-    glm::vec3 u = glm::vec3(0, 1, 0);
-    glm::vec3 r = glm::cross(v, u);
-    cam.up = glm::cross(r, v);
-    cam.right = r;
-
-    cam.position = camera_position;
-    camera_position += cam.look_at;
-    cam.position = camera_position;
+    camera.write_data(render_state->camera);
     camchanged = false;
 }
 
@@ -448,6 +429,10 @@ void run_cuda() {
 //-------------------------------
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (camera_controller.process_keyboard(key, action != GLFW_RELEASE)) {
+        return;
+    }
+
     if (action == GLFW_PRESS) {
         switch (key) {
         case GLFW_KEY_ESCAPE:
@@ -457,55 +442,32 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             save_image();
             break;
         case GLFW_KEY_SPACE:
+            camera = og_camera;
             camchanged = true;
-            render_state = &scene->state;
-            Camera& cam = render_state->camera;
-            cam.look_at = og_look_at;
             break;
         }
     }
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (is_mouse_over_imgui_window()) {
+    if (button != GLFW_MOUSE_BUTTON_RIGHT || (action == GLFW_PRESS && is_mouse_over_imgui_window())) {
         return;
     }
 
-    left_mouse_pressed = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
-    right_mouse_pressed = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
-    middle_mouse_pressed = (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS);
+    bool captured = action == GLFW_PRESS;
+    camera_controller.set_captured(captured);
+    glfwSetInputMode(window, GLFW_CURSOR, captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    glfwGetCursorPos(window, &last_x, &last_y);
 }
 
 void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (xpos == last_x || ypos == last_y) {
-        return; // otherwise, clicking back into window causes re-start
-    }
-
-    if (left_mouse_pressed) {
-        // compute new camera parameters
-        phi -= (xpos - last_x) / width;
-        theta -= (ypos - last_y) / height;
-        theta = std::fmax(0.001f, std::fmin(theta, PI));
-        camchanged = true;
-    } else if (right_mouse_pressed) {
-        zoom += (ypos - last_y) / height;
-        zoom = std::fmax(0.1f, zoom);
-        camchanged = true;
-    } else if (middle_mouse_pressed) {
-        render_state = &scene->state;
-        Camera& cam = render_state->camera;
-        glm::vec3 forward = cam.view;
-        forward.y = 0.0f;
-        forward = glm::normalize(forward);
-        glm::vec3 right = cam.right;
-        right.y = 0.0f;
-        right = glm::normalize(right);
-
-        cam.look_at -= (float)(xpos - last_x) * right * 0.01f;
-        cam.look_at += (float)(ypos - last_y) * forward * 0.01f;
-        camchanged = true;
-    }
-
+    camera_controller.handle_mouse(xpos - last_x, ypos - last_y);
     last_x = xpos;
     last_y = ypos;
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    if (!is_mouse_over_imgui_window()) {
+        camera_controller.handle_mouse_scroll(yoffset);
+    }
 }

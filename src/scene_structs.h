@@ -63,19 +63,6 @@ struct Material {
     MatType type;
 };
 
-struct Camera {
-    glm::ivec2 resolution;
-    glm::vec3 position;
-    glm::vec3 look_at;
-    glm::vec3 view;
-    glm::vec3 up;
-    glm::vec3 right;
-    glm::vec2 fov;
-    glm::vec2 pixel_length;
-    float lens_radius;
-    float focal_distance;
-};
-
 struct DeviceEnvMap {
     cudaTextureObject_t texture = 0;
     float strength = 1.f;

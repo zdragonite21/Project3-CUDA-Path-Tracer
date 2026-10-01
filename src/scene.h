@@ -1,11 +1,12 @@
 #pragma once
 
+#include "camera.h"
 #include "scene_structs.h"
 #include <vector>
 #include <string>
 
 struct RenderState {
-    Camera camera;
+    CameraData camera;
     unsigned int iterations;
     int trace_depth;
     std::vector<glm::vec3> image;
