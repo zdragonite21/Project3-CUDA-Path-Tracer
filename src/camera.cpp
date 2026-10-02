@@ -9,6 +9,15 @@ static constexpr float MOUSE_SENS_SCALE = 0.02f;
 static constexpr float SAFE_FRAC_PI_2 = PI * 0.5f - 0.0001f;
 static constexpr float MIN_SPEED2 = 1e-6f;
 
+void CameraData::set_fov(float fovy) {
+    float yscaled = tan(fovy / 2.f * (PI / 180));
+    float xscaled = (yscaled * resolution.x) / resolution.y;
+    float fovx = (atan(xscaled) * 180) / PI;
+    fov = glm::vec2(fovx, fovy);
+    pixel_length = glm::vec2(2 * xscaled / (float)resolution.x,
+                                    2 * yscaled / (float)resolution.y);
+}
+
 Camera::Camera(const CameraConfig& config) : settings(config) {}
 
 glm::quat Camera::orient() const {
@@ -100,7 +109,7 @@ bool CameraController::update_camera(Camera& camera, float dt) {
     glm::vec3 dir(0.f);
     if (is_captured()) {
         camera.settings.accel = glm::clamp(
-            camera.settings.accel - scroll * camera.settings.scroll_sens * dt, 0.f, 300.f);
+            camera.settings.accel - scroll * camera.settings.scroll_sens * dt, 0.f, 10000.f);
         dir = input.movement_vector(camera);
     } else {
         camera.position += camera.forward() * -scroll * camera.settings.scroll_sens * dt;

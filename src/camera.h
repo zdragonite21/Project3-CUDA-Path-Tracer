@@ -17,12 +17,14 @@ struct CameraData {
     glm::vec2 pixel_length;
     float lens_radius;
     float focal_distance;
+
+    void set_fov(float fovy);
 };
 
 struct CameraConfig {
     float accel = 100.f;
     float damping = 5.f;
-    float mouse_sens = 0.25f;
+    float mouse_sens = 0.15f;
     float scroll_sens = 0.1f;
 };
 
@@ -32,9 +34,6 @@ struct Camera {
     float yaw = 0.f;
     float pitch = 0.f;
     float aspect = 1.5f;
-    float fovy = 90.f;
-    float znear = 1.f;
-    float zfar = 100.f;
 
     CameraConfig settings;
 

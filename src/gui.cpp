@@ -5,6 +5,7 @@
 #include "imgui_impl_opengl3.h"
 #include "render_settings.h"
 #include "scene.h"
+#include <cfloat>
 
 void gui::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -22,6 +23,41 @@ void gui::begin_frame(bool& mouse_over_imgui_window) {
     ImGui::NewFrame();
 }
 
+static bool render_section(RenderSettings& s) {
+    bool reset = false;
+    reset |= ImGui::SliderInt("max depth", &s.max_depth, 1, 64);
+    reset |= ImGui::SliderFloat("env strength", &s.env_strength, 0.f, 10.f);
+    return reset;
+}
+static bool camera_section(CameraData& cam) {
+    bool reset = false;
+    reset |= ImGui::SliderFloat("lens radius", &cam.lens_radius, 0.f, 5.f);
+    reset |= ImGui::DragFloat("focal distance", &cam.focal_distance, 0.5f, 0.f, FLT_MAX);
+    float fovy = cam.fov.y;
+    reset |= ImGui::SliderFloat("fov", &fovy, 10.f, 170.f);
+    cam.set_fov(fovy);
+    return reset;
+}
+
+static bool sdf_section(RenderSettings& s) {
+    bool reset = false;
+    reset |= ImGui::SliderInt("max steps", &s.sdf_max_steps, 1, 512);
+    reset |= ImGui::SliderFloat("sdf hit eps", &s.sdf_hit_eps, 1e-6f, 1e-1f, "%.6f",
+                                ImGuiSliderFlags_Logarithmic);
+    reset |= ImGui::SliderFloat("sdf normal eps", &s.sdf_normal_eps, 1e-6f, 1e-1f, "%.6f",
+                                ImGuiSliderFlags_Logarithmic);
+    return reset;
+}
+static void display_section(RenderSettings& s) {
+    ImGui::Checkbox("agx tonemapping", &s.agx);
+}
+static void controls_section(CameraConfig& c) {
+    ImGui::SliderFloat("aceeleration", &c.accel, 1.f, 10000.f, "%4f", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("damping", &c.damping, 0.f, 200.f);
+    ImGui::SliderFloat("mouse sens", &c.mouse_sens, 0.01f, 3.f);
+    ImGui::SliderFloat("scroll sens", &c.scroll_sens, 0.001f, 3.f);
+}
+
 bool gui::render_imgui(GuiRefs& refs) {
     GuiDataContainer& d = *refs.data;
     RenderSettings& s = refs.scene->state.settings;
@@ -32,14 +68,21 @@ bool gui::render_imgui(GuiRefs& refs) {
     ImGui::Begin(
         "Path Tracer Analytics"); // Create a window called "Hello, world!" and append into it.
 
-    reset |= ImGui::SliderInt("max depth", &s.max_depth, 1, 64);
-    reset |= ImGui::SliderInt("max steps", &s.sdf_max_steps, 1, 512);
-    reset |= ImGui::SliderFloat("sdf hit eps", &s.sdf_hit_eps, 1e-6f, 1e-1f, "%.6f",
-                                ImGuiSliderFlags_Logarithmic);
-    reset |= ImGui::SliderFloat("sdf normal eps", &s.sdf_normal_eps, 1e-6f, 1e-1f, "%.6f",
-                                ImGuiSliderFlags_Logarithmic);
-    reset |= ImGui::SliderFloat("env strength", &s.env_strength, 0.f, 10.f);
-    ImGui::Checkbox("agx tonemapping", &s.agx);
+    if (ImGui::CollapsingHeader("Render", ImGuiTreeNodeFlags_DefaultOpen)) {
+        reset |= render_section(s);
+    }
+    if (ImGui::CollapsingHeader("SDF", ImGuiTreeNodeFlags_DefaultOpen)) {
+        reset |= sdf_section(s);
+    }
+    if (ImGui::CollapsingHeader("Camera")) {
+        reset |= camera_section(refs.scene->state.camera);
+    }
+    if (ImGui::CollapsingHeader("Display")) {
+        display_section(s);
+    }
+    if (ImGui::CollapsingHeader("Controls")) {
+        controls_section(refs.camera->settings);
+    }
 
     // LOOK: Un-Comment to check the output window and usage
     // ImGui::Text("This is some useful text.");               // Display some text (you can use a

@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "utilities.h"
-#include "math_utils.h"
 
 #include "json.hpp"
 #include <glm/gtc/matrix_inverse.hpp>
@@ -163,14 +162,7 @@ void Scene::load_from_json(const std::string& json_name) {
     camera.look_at = glm::vec3(lookat[0], lookat[1], lookat[2]);
     camera.up = glm::vec3(up[0], up[1], up[2]);
 
-    // calculate fov based on resolution
-    float yscaled = tan(fovy * (PI / 180));
-    float xscaled = (yscaled * camera.resolution.x) / camera.resolution.y;
-    float fovx = (atan(xscaled) * 180) / PI;
-    camera.fov = glm::vec2(fovx, fovy);
-
-    camera.pixel_length = glm::vec2(2 * xscaled / (float)camera.resolution.x,
-                                    2 * yscaled / (float)camera.resolution.y);
+    camera.set_fov(fovy);
 
     camera.view = glm::normalize(camera.look_at - camera.position);
     camera.right = glm::normalize(glm::cross(camera.view, camera.up));
