@@ -67,8 +67,7 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor, co
     // so we don't intersect with the same light when tracing shadow rays
     sray.t_max = light.type == LightType::Environment ? FLT_MAX : ls->dist - numeric::shadow_margin;
 
-    float lambert = glm::max(0.f, glm::dot(ls->wi, nor));
-    sray.contribution = path.throughput * li * bsdf_f * lambert * w / ls->pdf;
+    sray.contribution = path.throughput * li * bsdf_f * w / ls->pdf;
 
     return sray;
 }
@@ -82,7 +81,7 @@ __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 no
         path_segment.throughput = glm::vec3(0.f);
         terminate_path(path_segment);
     } else {
-        path_segment.throughput *= bs.f * bx::abs_dot(bs.wi, normal) / bs.pdf;
+        path_segment.throughput *= bs.f / bs.pdf;
         path_segment.prev_was_delta = (bs.type & BxdfFlag::Specular) != BxdfFlag::Unset;
         path_segment.prev_bsdf_pdf = bs.pdf;
         path_segment.ray = bx::spawn_ray(p, bs.wi, normal);

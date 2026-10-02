@@ -112,6 +112,7 @@ __host__ __device__ constexpr BxdfFlag& operator|=(BxdfFlag& a, BxdfFlag b) {
 struct BsdfSample {
     glm::vec3 wi;
     float pdf;
+    // cosine is baked in
     glm::vec3 f;
     BxdfFlag type;
 };

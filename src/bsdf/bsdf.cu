@@ -39,7 +39,7 @@ __device__ glm::vec3 eval_bsdf(glm::vec3 p, glm::vec3 nor, glm::vec3 wo_w, glm::
 
     switch (m.type) {
     case MatType::Diffuse:
-        return eval_diffuse(m.color);
+        return eval_diffuse(wi, m.color);
     case MatType::Dielectric:
         if (m.roughness == 0.f) {
             return glm::vec3(0.f);

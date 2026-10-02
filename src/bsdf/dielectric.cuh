@@ -23,8 +23,7 @@ __device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm:
         // sample perfect specular reflection
         sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
         sample.pdf = r / (r + t);
-        float lambert = glm::abs(bx::cos_theta(sample.wi));
-        sample.f = lambert > 0.f ? glm::vec3(r) / lambert : glm::vec3(0);
+        sample.f = glm::vec3(r);
         sample.type = BxdfFlag::Reflection;
     } else {
         // sample perfect specular transmission
@@ -41,7 +40,7 @@ __device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm:
         }
         sample.wi = wi;
         sample.pdf = t / (r + t);
-        sample.f = eta * eta * glm::vec3(t) / glm::abs(bx::cos_theta(sample.wi));
+        sample.f = eta * eta * glm::vec3(t);
         sample.type = BxdfFlag::Transmission;
     }
 

@@ -80,6 +80,7 @@ set(headers
     src/bsdf/dielectric.cuh
     src/bsdf/conductor.cuh
     src/bsdf/disney_diffuse.cuh
+    src/bsdf/microfacet.cuh
 )
 
 set(sources

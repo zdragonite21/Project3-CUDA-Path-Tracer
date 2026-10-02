@@ -46,6 +46,9 @@ static __device__ __forceinline__ float cos_d_phi(const glm::vec3& wa, const glm
 static __device__ __forceinline__ float abs_dot(const glm::vec3& w, const glm::vec3& n) {
     return glm::abs(glm::dot(w, n));
 }
+static __device__ __forceinline__ float abs_cos(const glm::vec3& w) {
+    return abs(cos_theta(w));
+}
 static __device__ __forceinline__ glm::vec3 face_forward(const glm::vec3& n, const glm::vec3& v) {
     return glm::dot(n, v) < 0.f ? -n : n;
 }
