@@ -1,5 +1,5 @@
-#include "bsdf.cuh"
-#include "bxdf_utils.cuh"
+#include "bsdf/bsdf.cuh"
+#include "bsdf/bxdf_utils.cuh"
 #include "config.h"
 #include "intersections.cuh"
 #include "light_sampling.cuh"
@@ -10,17 +10,16 @@
 #include <corecrt_terminate.h>
 #include "render_settings.cuh"
 
-__device__ inline float power_heuristic(float pdf_a, float pdf_b) {
+__device__ __forceinline__ float power_heuristic(float pdf_a, float pdf_b) {
     float a2 = pdf_a * pdf_a;
     float b2 = pdf_b * pdf_b;
     return a2 / (a2 + b2);
 }
 
-__device__ void terminate_path(PathSegment& path) {
+__device__ __forceinline__ void terminate_path(PathSegment& path) {
     path.remaining_bounces = 0;
 }
 
-// nearest neighbor
 __device__ glm::vec3 eval_environment(const DeviceEnvMap& env, glm::vec3 wi) {
     if (env.texture == 0) {
         return glm::vec3(0.0f);
@@ -91,7 +90,7 @@ __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 no
     }
 }
 
-__device__ bool is_not_specular(const Material& m) {
+__device__ __forceinline__ bool is_not_specular(const Material& m) {
     return m.type == MatType::Diffuse ||
            ((m.type == MatType::Dielectric || m.type == MatType::Conductor) && m.roughness != 0.f);
 }

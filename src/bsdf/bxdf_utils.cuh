@@ -1,7 +1,7 @@
 #pragma once
 
-#include "config.h"
-#include "scene_structs.h"
+#include "../config.h"
+#include "../scene_structs.h"
 
 // bxdf utils
 namespace bx {

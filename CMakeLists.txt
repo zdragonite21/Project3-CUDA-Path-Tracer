@@ -52,7 +52,6 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
     src/image.h
-    src/bsdf.cuh
     src/intersections.cuh
     src/glsl_utility.hpp
     src/pathtrace.h
@@ -61,7 +60,6 @@ set(headers
     src/utilities.h
     src/thrust_utils.h
     src/sampling.cuh
-    src/bxdf_utils.cuh
     src/light_sampling.cuh
     src/shading.cuh
     src/config.h
@@ -75,6 +73,13 @@ set(headers
     src/gui_data.h
     src/render_settings.cuh
     src/render_settings.h
+    src/bsdf/bsdf.cuh
+    src/bsdf/bxdf_utils.cuh
+    src/bsdf/fresnel.cuh
+    src/bsdf/fresnel.cuh
+    src/bsdf/dielectric.cuh
+    src/bsdf/conductor.cuh
+    src/bsdf/disney_diffuse.cuh
 )
 
 set(sources
@@ -84,7 +89,7 @@ set(sources
     src/glsl_utility.cpp
     src/pathtrace.cu
     src/intersections.cu
-    src/bsdf.cu
+    src/bsdf/bsdf.cu
     src/thrust_utils.cu
     src/scene.cpp
     src/utilities.cpp
