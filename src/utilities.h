@@ -7,7 +7,6 @@
 #include <vector>
 
 namespace utility_core {
-extern void coordinate_system(glm::vec3 in_nor, glm::vec3& out_tan, glm::vec3& out_bit);
 extern bool replace_string(std::string& str, const std::string& from, const std::string& to);
 extern glm::vec3 clamp_rgb(glm::vec3 color);
 extern std::vector<std::string> tokenize_string(std::string str);

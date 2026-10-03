@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bsdf/bsdf_structs.cuh"
 #include <cuda_runtime.h>
 
 #include <glm/vec2.hpp>
@@ -48,20 +49,9 @@ struct Light {
     LightType type;
 };
 
-enum class MatType : uint8_t { Diffuse, Conductor, Dielectric, Emissive };
-
 struct Material {
-    glm::vec3 color;
-    glm::vec3 eta;
-    glm::vec3 k;
-
-    float anisotropy;
-    float roughness;
-    float ior;
-
+    BsdfVariant bsdf;
     glm::vec3 emission;
-
-    MatType type;
 };
 
 struct DeviceEnvMap {

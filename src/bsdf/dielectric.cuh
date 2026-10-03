@@ -2,21 +2,20 @@
 
 #include "fresnel.cuh"
 
-#include "../scene_structs.h"
 #include "../thrust_utils.h"
+#include "bsdf_structs.cuh"
 #include "bxdf_utils.cuh"
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
 
-
 // assumes the medium is air and not spectral
-__device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm::vec3 wo,
-                                                               const Material& m, RngEng& rng) {
+__device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm::vec3 wo, float ior,
+                                                               RngEng& rng) {
     BsdfSample sample;
     UnifDist<float> u01(0, 1);
 
     // eta_i = 1.f because we assume air here
-    float r = fresnel_dielectric_eval(bx::cos_theta(wo), 1.f, m.ior);
+    float r = fresnel_dielectric_eval(bx::cos_theta(wo), 1.f, ior);
     float t = 1.f - r;
 
     if (u01(rng) < r / (r + t)) {
@@ -28,8 +27,8 @@ __device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm:
     } else {
         // sample perfect specular transmission
         bool entering = bx::cos_theta(wo) > 0;
-        float eta_i = entering ? 1.f : m.ior;
-        float eta_t = entering ? m.ior : 1.f;
+        float eta_i = entering ? 1.f : ior;
+        float eta_t = entering ? ior : 1.f;
         float eta = eta_i / eta_t;
         glm::vec3 wi;
         if (!bx::refract(wo, bx::face_forward(glm::vec3(0, 0, 1), wo), eta, wi)) {
@@ -49,11 +48,28 @@ __device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm:
     return sample;
 }
 
+__device__ __forceinline__ float pdf_dielectric(glm::vec3 wi, glm::vec3 wo, const Dielectric& m) {
+    if (m.roughness == 0.f) {
+        return 0.f;
+    }
+
+    return 0.f;
+}
+
+__device__ __forceinline__ glm::vec3 eval_dielectric(glm::vec3 wi, glm::vec3 wo,
+                                                    const Dielectric& m) {
+    if (m.roughness == 0.f) {
+        return glm::vec3(0);
+    }
+
+    return glm::vec3(0);
+}
+
 __device__ __forceinline__ BsdfSample sample_dielectric(glm::vec3 p, glm::vec3 wo,
-                                                        const Material& m, RngEng& rng) {
+                                                        const Dielectric& m, RngEng& rng) {
     BsdfSample sample{};
     if (m.roughness == 0.f) {
-        sample = sample_smooth_dielectric(p, wo, m, rng);
+        sample = sample_smooth_dielectric(p, wo, m.ior, rng);
     }
 
     return sample;

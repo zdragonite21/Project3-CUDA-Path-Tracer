@@ -49,6 +49,9 @@ static __device__ __forceinline__ float abs_dot(const glm::vec3& w, const glm::v
 static __device__ __forceinline__ float abs_cos(const glm::vec3& w) {
     return abs(cos_theta(w));
 }
+static __device__ __forceinline__ float non_neg_cos(const glm::vec3& w) {
+    return fmaxf(0.f, cos_theta(w));
+}
 static __device__ __forceinline__ glm::vec3 face_forward(const glm::vec3& n, const glm::vec3& v) {
     return glm::dot(n, v) < 0.f ? -n : n;
 }
@@ -81,6 +84,7 @@ static __device__ bool refract(glm::vec3 wo, glm::vec3 n, float eta, glm::vec3& 
     wt = eta * -wo + (eta * cos_theta_i - cos_theta_t) * n;
     return true;
 }
+
 static __device__ Ray spawn_ray(glm::vec3 pos, glm::vec3 wi, glm::vec3 nor) {
     float side = glm::dot(wi, nor) >= 0.f ? 1.f : -1.f;
     return Ray{pos + side * numeric::ray_offset * nor, wi};

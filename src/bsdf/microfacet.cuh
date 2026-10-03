@@ -34,11 +34,11 @@ __device__ __forceinline__ float ggx_g1(glm::vec3 w, float ax, float ay) {
     return 1.f / (1.f + ggx_lambda(w, ax, ay));
 }
 
-__device__ __forceinline__ float ggx_g2(glm::vec3 wi, glm::vec3 wo, float ax, float ay) {
+__device__ __forceinline__ float ggx_g2(glm::vec3 wo, glm::vec3 wi, float ax, float ay) {
     return 1.f / (1.f + ggx_lambda(wi, ax, ay) + ggx_lambda(wo, ax, ay));
 }
 
-__device__ __forceinline__ float pdf_ggx(glm::vec3 wi, glm::vec3 wo, float anis, float rough) {
+__device__ __forceinline__ float pdf_ggx(glm::vec3 wo, glm::vec3 wi, float anis, float rough) {
     if (bx::cos_theta(wi) * bx::cos_theta(wo) <= 0.f) {
         // no transmission
         return 0.f;
@@ -52,9 +52,6 @@ __device__ __forceinline__ float pdf_ggx(glm::vec3 wi, glm::vec3 wo, float anis,
     wh = wh.z < 0 ? -wh : wh;
 
     float wo_cos = bx::abs_cos(wo);
-    if (wo_cos <= 0.f) {
-        return 0.f;
-    }
 
     glm::vec2 a = ggx_alpha(anis, rough);
     float d = ggx_d(wh, a.x, a.y);
@@ -63,7 +60,7 @@ __device__ __forceinline__ float pdf_ggx(glm::vec3 wi, glm::vec3 wo, float anis,
     return d * g1 / (4.f * wo_cos);
 }
 
-__device__ __forceinline__ float eval_ggx_dg(glm::vec3 wi, glm::vec3 wo, float anis, float rough) {
+__device__ __forceinline__ float eval_ggx_dg(glm::vec3 wo, glm::vec3 wi, float anis, float rough) {
     if (bx::cos_theta(wi) * bx::cos_theta(wo) <= 0.f) {
         // no transmission
         return 0.f;
@@ -98,9 +95,6 @@ __device__ __forceinline__ glm::vec3 sample_ggx_vndf(glm::vec3 wo, float ax, flo
 __device__ __forceinline__ BsdfSample sample_ggx(glm::vec3 p, glm::vec3 wo, float anis, float rough,
                                                  RngEng& rng) {
     BsdfSample sample{};
-    if (bx::cos_theta(wo) <= 0.f) {
-        return sample;
-    }
 
     glm::vec2 a = ggx_alpha(anis, rough);
     glm::vec3 wh = sample_ggx_vndf(wo, a.x, a.y, rng);

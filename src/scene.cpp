@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include "bsdf/bsdf.cuh"
 #include "config.h"
 #include "utilities.h"
 
@@ -84,25 +85,25 @@ void Scene::load_from_json(const std::string& json_name) {
         Material new_material{};
         if (p["TYPE"] == "Diffuse") {
             const auto& col = p["RGB"];
-            new_material.type = MatType::Diffuse;
-            new_material.color = glm::vec3(col[0], col[1], col[2]);
+            new_material.bsdf = Lambertian{glm::vec3(col[0], col[1], col[2])};
+            new_material.emission = glm::vec3(0);
         } else if (p["TYPE"] == "Emitting") {
             const auto& col = p["EMISSION"];
-            new_material.type = MatType::Emissive;
+            new_material.bsdf = Lambertian{};
             new_material.emission =
                 glm::vec3(col[0], col[1], col[2]) * static_cast<float>(p["STRENGTH"]);
         } else if (p["TYPE"] == "Conductor") {
             const auto& eta = p["ETA"];
             const auto& k = p["K"];
-            new_material.type = MatType::Conductor;
-            new_material.eta = glm::vec3(eta[0], eta[1], eta[2]);
-            new_material.k = glm::vec3(k[0], k[1], k[2]);
-            new_material.roughness = p.value("ROUGHNESS", 0.f);
-            new_material.anisotropy = glm::clamp(p.value("ANISOTROPY", 0.f), 0.f, 1.f);
+            new_material.bsdf = Conductor{glm::vec3(eta[0], eta[1], eta[2]),
+                                          glm::vec3(k[0], k[1], k[2]), p.value("ROUGHNESS", 0.f),
+                                          glm::clamp(p.value("ANISOTROPY", 0.f), 0.f, 1.f)
+
+            };
+            new_material.emission = glm::vec3(0);
         } else if (p["TYPE"] == "Dielectric") {
-            new_material.type = MatType::Dielectric;
-            new_material.roughness = p.value("ROUGHNESS", 0.f);
-            new_material.roughness = p.value("IOR", 1.f);
+            new_material.bsdf = Dielectric{p.value("IOR", 1.f), p.value("ROUGHNESS", 0.f)};
+            new_material.emission = glm::vec3(0);
         }
         mat_name_to_id[name] = materials.size();
         materials.push_back(new_material);
@@ -121,7 +122,7 @@ void Scene::load_from_json(const std::string& json_name) {
             new_geom.type = Sphere;
         }
         new_geom.material_id = mat_name_to_id[p["MATERIAL"]];
-        if (materials[new_geom.material_id].type == MatType::Emissive) {
+        if (is_emissive(materials[new_geom.material_id])) {
             Light new_light{};
             new_light.geom_id = geoms.size();
             new_light.type = LightType::Area;

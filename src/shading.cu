@@ -1,13 +1,13 @@
 #include "bsdf/bsdf.cuh"
 #include "bsdf/bxdf_utils.cuh"
 #include "config.h"
+#include "glm/ext/matrix_float3x3.hpp"
 #include "intersections.cuh"
 #include "light_sampling.cuh"
 #include "sampling.cuh"
 #include "scene_structs.h"
 #include "shading.cuh"
 #include "math_utils.h"
-#include <corecrt_terminate.h>
 #include "render_settings.cuh"
 
 __device__ __forceinline__ float power_heuristic(float pdf_a, float pdf_b) {
@@ -74,8 +74,10 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor, co
 
 __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 normal,
                             const Material& m, RngEng& rng) {
-
-    BsdfSample bs = sample_bsdf(p, normal, -path_segment.ray.dir, m, rng);
+    
+    glm::mat3 to_world = bx::local_to_world(normal);
+    glm::vec3 wo_local = glm::transpose(to_world) * -path_segment.ray.dir;
+    BsdfSample bs = sample_bsdf(p, normal, wo_local, to_world, m, rng);
 
     if (bs.type == BxdfFlag::Unset || bs.pdf == 0.f) {
         path_segment.throughput = glm::vec3(0.f);
@@ -87,11 +89,6 @@ __device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 no
         path_segment.ray = bx::spawn_ray(p, bs.wi, normal);
         path_segment.remaining_bounces--;
     }
-}
-
-__device__ __forceinline__ bool is_not_specular(const Material& m) {
-    return m.type == MatType::Diffuse ||
-           ((m.type == MatType::Dielectric || m.type == MatType::Conductor) && m.roughness != 0.f);
 }
 
 __global__ void shade_material(int iter, int num_paths, int depth, int num_lights, int num_geoms,
@@ -130,7 +127,7 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     // emissive
 
     Material material = materials[mat_id];
-    if (material.type == MatType::Emissive && material.emission != glm::vec3(0)) {
+    if (is_emissive(material)) {
 
 #if LI_MIS
         if (depth == 0 || path.prev_was_delta) {
@@ -160,7 +157,7 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     const glm::vec3& nor = intersection.surface_normal;
 
 #if LI_MIS
-    if (is_not_specular(material)) {
+    if (!is_delta(material)) {
         // if not delta (so change this when I add microfacet)
         cstd::optional<ShadowRay> sray = estimate_direct_lighting(
             path, p, nor, material, rng, lights, num_lights, geoms, num_geoms, env);

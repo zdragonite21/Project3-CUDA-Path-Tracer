@@ -81,6 +81,7 @@ set(headers
     src/bsdf/conductor.cuh
     src/bsdf/disney_diffuse.cuh
     src/bsdf/microfacet.cuh
+    src/bsdf/bsdf_structs.cuh
 )
 
 set(sources
@@ -94,7 +95,6 @@ set(sources
     src/thrust_utils.cu
     src/scene.cpp
     src/utilities.cpp
-    src/sampling.cu
     src/light_sampling.cu
     src/shading.cu
     src/display.cu

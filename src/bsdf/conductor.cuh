@@ -2,16 +2,17 @@
 
 #include "fresnel.cuh"
 
-#include "../scene_structs.h"
 #include "../thrust_utils.h"
+#include "bsdf_structs.cuh"
 #include "bxdf_utils.cuh"
 #include "microfacet.cuh"
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
 
+
 // assumes the medium is air and rgb approx, not spectral
 __device__ __forceinline__ BsdfSample sample_smooth_conductor(glm::vec3 p, glm::vec3 wo,
-                                                              const Material& m) {
+                                                              const Conductor& m) {
     BsdfSample sample;
 
     sample.wi = glm::reflect(-wo, glm::vec3(0, 0, 1));
@@ -24,7 +25,7 @@ __device__ __forceinline__ BsdfSample sample_smooth_conductor(glm::vec3 p, glm::
     return sample;
 }
 
-__device__ __forceinline__ float pdf_conductor(glm::vec3 wi, glm::vec3 wo, const Material& m) {
+__device__ __forceinline__ float pdf_conductor(glm::vec3 wi, glm::vec3 wo, const Conductor& m) {
     if (m.roughness == 0.f) {
         return 0.f;
     }
@@ -32,7 +33,8 @@ __device__ __forceinline__ float pdf_conductor(glm::vec3 wi, glm::vec3 wo, const
     return pdf_ggx(wi, wo, m.anisotropy, m.roughness);
 }
 
-__device__ __forceinline__ glm::vec3 eval_conductor(glm::vec3 wi, glm::vec3 wo, const Material& m) {
+__device__ __forceinline__ glm::vec3 eval_conductor(glm::vec3 wi, glm::vec3 wo,
+                                                    const Conductor& m) {
     if (m.roughness == 0.f) {
         return glm::vec3(0);
     }
@@ -46,8 +48,8 @@ __device__ __forceinline__ glm::vec3 eval_conductor(glm::vec3 wi, glm::vec3 wo, 
     return fresnel_conductor_eval(glm::dot(wo, wh), glm::vec3(1.f), m.eta, m.k) * ggx_dg;
 }
 
-__device__ __forceinline__ BsdfSample sample_conductor(glm::vec3 p, glm::vec3 wo, const Material& m,
-                                                       RngEng& rng) {
+__device__ __forceinline__ BsdfSample sample_conductor(glm::vec3 p, glm::vec3 wo,
+                                                       const Conductor& m, RngEng& rng) {
     if (m.roughness == 0.f) {
         return sample_smooth_conductor(p, wo, m);
     }
