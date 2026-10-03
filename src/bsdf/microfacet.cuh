@@ -19,8 +19,8 @@ __device__ __forceinline__ float ggx_lambda(glm::vec3 w, float ax, float ay) {
 __device__ __forceinline__ glm::vec2 ggx_alpha(float anis, float rough) {
     float aspect = sqrtf(1.f - 0.9f * anis);
     const float amin = 0.0001f;
-    float ax = fmaxf(amin, rough * rough / aspect);
-    float ay = fmaxf(amin, rough * rough * aspect);
+    float ax = glm::clamp(rough * rough / aspect, amin, 1.f);
+    float ay = glm::clamp(rough * rough * aspect, amin, 1.f);
     return glm::vec2(ax, ay);
 }
 
