@@ -12,10 +12,10 @@ static __device__ __forceinline__ float cos2_theta(const glm::vec3& w) {
     return w.z * w.z;
 }
 static __device__ __forceinline__ float sin2_theta(const glm::vec3& w) {
-    return glm::max(0.f, 1.f - cos2_theta(w));
+    return fmaxf(0.f, 1.f - cos2_theta(w));
 }
 static __device__ __forceinline__ float sin_theta(const glm::vec3& w) {
-    return glm::sqrt(sin2_theta(w));
+    return sqrtf(sin2_theta(w));
 }
 static __device__ __forceinline__ float tan_theta(const glm::vec3& w) {
     return sin_theta(w) / cos_theta(w);
@@ -53,12 +53,8 @@ static __device__ __forceinline__ glm::vec3 face_forward(const glm::vec3& n, con
     return glm::dot(n, v) < 0.f ? -n : n;
 }
 static __device__ void coordinate_system(glm::vec3 in_nor, glm::vec3& out_tan, glm::vec3& out_bit) {
-    if (abs(in_nor.x) > abs(in_nor.y))
-        out_tan =
-            glm::vec3(-in_nor.z, 0, in_nor.x) / sqrt(in_nor.x * in_nor.x + in_nor.z * in_nor.z);
-    else
-        out_tan =
-            glm::vec3(0, in_nor.z, -in_nor.y) / sqrt(in_nor.y * in_nor.y + in_nor.z * in_nor.z);
+    glm::vec3 up = fabsf(in_nor.y) < 0.999999f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
+    out_tan = glm::normalize(glm::cross(up, in_nor));
     out_bit = glm::cross(in_nor, out_tan);
 }
 
@@ -75,13 +71,13 @@ static __device__ glm::mat3 world_to_local(glm::vec3 nor) {
 static __device__ bool refract(glm::vec3 wo, glm::vec3 n, float eta, glm::vec3& wt) {
     // Compute cos theta using Snell's law
     float cos_theta_i = glm::dot(n, wo);
-    float sin2_theta_i = glm::max(0.f, 1.f - cos_theta_i * cos_theta_i);
+    float sin2_theta_i = fmaxf(0.f, 1.f - cos_theta_i * cos_theta_i);
     float sin2_theta_t = eta * eta * sin2_theta_i;
 
     // Handle total internal reflection for transmission
     if (sin2_theta_t >= 1.f)
         return false;
-    float cos_theta_t = glm::sqrt(1.f - sin2_theta_t);
+    float cos_theta_t = sqrtf(1.f - sin2_theta_t);
     wt = eta * -wo + (eta * cos_theta_i - cos_theta_t) * n;
     return true;
 }

@@ -97,7 +97,7 @@ __device__ __forceinline__ glm::vec3 sample_ggx_vndf(glm::vec3 wo, float ax, flo
 
 __device__ __forceinline__ BsdfSample sample_ggx(glm::vec3 p, glm::vec3 wo, float anis, float rough,
                                                  RngEng& rng) {
-    BsdfSample sample;
+    BsdfSample sample{};
     if (bx::cos_theta(wo) <= 0.f) {
         return sample;
     }

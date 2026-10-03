@@ -97,11 +97,12 @@ void Scene::load_from_json(const std::string& json_name) {
             new_material.type = MatType::Conductor;
             new_material.eta = glm::vec3(eta[0], eta[1], eta[2]);
             new_material.k = glm::vec3(k[0], k[1], k[2]);
-            new_material.roughness = p["ROUGHNESS"];
+            new_material.roughness = p.value("ROUGHNESS", 0.f);
+            new_material.anisotropy = glm::clamp(p.value("ANISOTROPY", 0.f), 0.f, 1.f);
         } else if (p["TYPE"] == "Dielectric") {
             new_material.type = MatType::Dielectric;
-            new_material.roughness = p["ROUGHNESS"];
-            new_material.ior = p["IOR"];
+            new_material.roughness = p.value("ROUGHNESS", 0.f);
+            new_material.roughness = p.value("IOR", 1.f);
         }
         mat_name_to_id[name] = materials.size();
         materials.push_back(new_material);

@@ -47,11 +47,7 @@ __device__ glm::vec3 eval_bsdf(glm::vec3 p, glm::vec3 nor, glm::vec3 wo_w, glm::
         // implement microfacet
         return glm::vec3(0.f);
     case MatType::Conductor:
-        if (m.roughness == 0.f) {
-            return glm::vec3(0.f);
-        }
-        // implement microfacet
-        return glm::vec3(0.f);
+        return eval_conductor(wi, wo, m);
     default:
         return glm::vec3(0.f);
     }
@@ -76,11 +72,7 @@ __device__ float pdf_bsdf(glm::vec3 p, glm::vec3 nor, glm::vec3 wo_w, glm::vec3 
         // implement microfacet
         return 0.f;
     case MatType::Conductor:
-        if (m.roughness == 0.f) {
-            return 0.f;
-        }
-        // implement microfacet
-        return 0.f;
+        return pdf_conductor(wi, wo, m);
     default:
         return 0.f;
     }

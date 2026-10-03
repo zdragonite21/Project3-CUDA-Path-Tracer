@@ -55,6 +55,7 @@ struct Material {
     glm::vec3 eta;
     glm::vec3 k;
 
+    float anisotropy;
     float roughness;
     float ior;
 
