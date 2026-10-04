@@ -17,7 +17,7 @@ struct RenderState {
 struct EnvironmentMap {
     int width = 0;
     int height = 0;
-    float strength = 1.f;
+    std::string path;
     std::vector<glm::vec3> pixels;
 };
 
@@ -28,6 +28,9 @@ class Scene {
 
   public:
     Scene(std::string filename);
+    void save_to_json(const std::string& out_path) const;
+
+    std::string filename;
 
     std::vector<Geom> geoms;
     std::vector<std::string> material_names;

@@ -7,6 +7,10 @@
 #include "scene.h"
 #include "utilities.h"
 
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <commdlg.h>
 
 #include <cstddef>
 #include <cuda_runtime_api.h>
@@ -22,6 +26,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -252,6 +257,60 @@ void save_image(bool on_exit) {
     // img.save_hdr(filename);  // Save a Radiance HDR file
 }
 
+void save_scene(bool on_exit) {
+    std::string dir = on_exit ? "scene_renders/" : "scene_saves/";
+    std::string time = on_exit ? start_time_string : current_time_string();
+    std::string path = dir + render_state->image_name + "." + time + ".json";
+    scene->save_to_json(path);
+    printf("Saved %s\n", path.c_str());
+}
+
+std::string open_scene_dialog() {
+    std::filesystem::create_directories("scene_saves");
+    std::string initial_dir = std::filesystem::absolute("scene_saves").string();
+    char file[MAX_PATH] = "";
+    OPENFILENAMEA ofn{};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.lpstrFilter = "Scene (*.json)\0*.json\0";
+    ofn.lpstrFile = file;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrInitialDir = initial_dir.c_str();
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+    return GetOpenFileNameA(&ofn) ? file : "";
+}
+
+void init_camera_from_scene() {
+    iteration = 0;
+    render_state = &scene->state;
+    const CameraData& cam = render_state->camera;
+    width = cam.resolution.x;
+    height = cam.resolution.y;
+
+    camera.position = cam.position;
+    camera.yaw = glm::atan(-cam.view.x, -cam.view.z);
+    camera.pitch = glm::asin(cam.view.y);
+    og_camera = camera;
+}
+
+void load_scene(const std::string& path) {
+    pathtrace_free();
+    delete scene;
+    scene = new Scene(path);
+
+    int old_width = width, old_height = height;
+    init_camera_from_scene();
+    if (width != old_width || height != old_height) {
+        cleanup_cuda();
+        glfwSetWindowSize(window, width, height);
+        glViewport(0, 0, width, height);
+        init_textures();
+        init_pbo();
+    }
+
+    pathtrace_init(scene);
+    needs_reset = true;
+}
+
 void main_loop() {
     pathtrace_init(scene);
     pathtrace_reset(scene);
@@ -287,9 +346,18 @@ void main_loop() {
 
         gui::end_frame();
         glfwSwapBuffers(window);
+
+        if (gui_data->load_requested) {
+            gui_data->load_requested = false;
+            std::string path = open_scene_dialog();
+            if (!path.empty()) {
+                load_scene(path);
+            }
+        }
     }
 
     save_image(true);
+    save_scene(true);
 
     pathtrace_free();
     cleanup_cuda();
@@ -321,17 +389,7 @@ int main(int argc, char** argv) {
     // Create ImGui data instance
     gui_data = new GuiDataContainer();
 
-    // Set up camera stuff from loaded path tracer settings
-    iteration = 0;
-    render_state = &scene->state;
-    const CameraData& cam = render_state->camera;
-    width = cam.resolution.x;
-    height = cam.resolution.y;
-
-    camera.position = cam.position;
-    camera.yaw = glm::atan(-cam.view.x, -cam.view.z);
-    camera.pitch = glm::asin(cam.view.y);
-    og_camera = camera;
+    init_camera_from_scene();
 
     // Initialize CUDA and GL components
     init();
@@ -392,7 +450,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             glfwSetWindowShouldClose(window, GL_TRUE);
             break;
         case GLFW_KEY_S:
-            save_image(false);
+            if (mods & GLFW_MOD_CONTROL) {
+                save_scene(false);
+            } else {
+                save_image(false);
+            }
             break;
         case GLFW_KEY_SPACE:
             camera = og_camera;

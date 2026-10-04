@@ -19,4 +19,5 @@ CUDA Path Tracer
 
 
 - https://github.com/bWFuanVzYWth/AgX/blob/main/agx.glsl
-
+- https://jbaker.graphics/writings/DEC.html
+- https://cseweb.ucsd.edu/~tzli/cse272/wi2026/

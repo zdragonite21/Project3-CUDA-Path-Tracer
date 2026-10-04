@@ -85,6 +85,10 @@ bool gui::render_imgui(GuiRefs& refs) {
 
     ImGui::Begin(
         "Path Tracer Analytics"); // Create a window called "Hello, world!" and append into it.
+    
+    ImGui::Text("Traced Depth %d", refs.data->traced_depth);
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
+                ImGui::GetIO().Framerate);
 
     if (ImGui::CollapsingHeader("Render", ImGuiTreeNodeFlags_DefaultOpen)) {
         reset |= render_section(s);
@@ -105,9 +109,7 @@ bool gui::render_imgui(GuiRefs& refs) {
         controls_section(refs.camera->settings);
     }
 
-    ImGui::Text("Traced Depth %d", refs.data->traced_depth);
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
-                ImGui::GetIO().Framerate);
+    d.load_requested |= ImGui::Button("Load scene");
     ImGui::End();
 
     return reset;

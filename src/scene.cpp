@@ -12,6 +12,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <charconv>
 #include <filesystem>
 #include <stb_image.h>
 #include <stdexcept>
@@ -19,7 +20,89 @@
 using namespace std;
 using json = nlohmann::json;
 
-Scene::Scene(string filename) {
+namespace nlohmann {
+template <> struct adl_serializer<float> {
+    static void to_json(json& j, float f) {
+        char buf[32]{};
+        std::to_chars(buf, buf + sizeof(buf) - 1, f);
+        j = std::strtod(buf, nullptr);
+    }
+    static void from_json(const json& j, float& f) {
+        f = j.get<double>();
+    }
+};
+
+// glm vec serialiazer
+template <glm::length_t L, typename T, glm::qualifier Q> struct adl_serializer<glm::vec<L, T, Q>> {
+    static void to_json(json& j, const glm::vec<L, T, Q>& v) {
+        j = json::array();
+        for (glm::length_t i = 0; i < L; ++i) {
+            j.push_back(v[i]);
+        }
+    }
+    static void from_json(const json& j, glm::vec<L, T, Q>& v) {
+        for (glm::length_t i = 0; i < L; ++i) {
+            v[i] = j.at(i).get<T>();
+        }
+    }
+};
+} // namespace nlohmann
+
+// struct macros
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Lambertian, color)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Conductor, eta, k, roughness, anisotropy)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RenderSettings, max_depth, sdf_max_steps, sdf_hit_eps,
+                                   sdf_normal_eps, agx)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform, translation, rotation, scale)
+NLOHMANN_JSON_SERIALIZE_ENUM(GeomType,
+                             {{Sphere, "sphere"}, {Cube, "cube"}, {Plane, "plane"}, {Sdf, "sdf"}})
+
+static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric"};
+
+void to_json(json& j, const Material& m) {
+    cuda::std::visit([&](const auto& b) { j = b; }, m.bsdf);
+    j["type"] = bsdf_types[m.bsdf.index()];
+    j["emission"] = m.emission;
+}
+
+void from_json(const json& j, Material& m) {
+    const std::string type = j.at("type");
+    if (type == "diffuse") {
+        m.bsdf = j.get<Lambertian>();
+    } else if (type == "conductor") {
+        m.bsdf = j.get<Conductor>();
+    } else if (type == "dielectric") {
+        m.bsdf = j.get<Dielectric>();
+    } else {
+        throw std::runtime_error("unknown material type " + type);
+    }
+    m.emission = j.value("emission", glm::vec3(0.f));
+}
+
+void to_json(json& j, const CameraData& c) {
+    j = {{"resolution", c.resolution},
+         {"position", c.position},
+         {"look_at", c.position + c.view},
+         {"up", c.up},
+         {"fovy", c.fov.y},
+         {"lens_radius", c.lens_radius},
+         {"focal_distance", c.focal_distance}};
+}
+
+void from_json(const json& j, CameraData& c) {
+    j.at("resolution").get_to(c.resolution);
+    j.at("position").get_to(c.position);
+    j.at("look_at").get_to(c.look_at);
+    j.at("up").get_to(c.up);
+    j.at("lens_radius").get_to(c.lens_radius);
+    j.at("focal_distance").get_to(c.focal_distance);
+    c.set_fov(j.at("fovy").get<float>());
+    c.view = glm::normalize(c.look_at - c.position);
+    c.right = glm::normalize(glm::cross(c.view, c.up));
+}
+
+Scene::Scene(string filename) : filename(filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     auto ext = filename.substr(filename.find_last_of('.'));
@@ -62,62 +145,29 @@ void Scene::load_hdri_pixels(const std::string& json_name, const std::string& im
 void Scene::load_from_json(const std::string& json_name) {
     std::ifstream f(json_name);
     json data = json::parse(f);
-    const auto& lights_data = data["Lights"];
-    for (const auto& item : lights_data.items()) {
-        const auto& name = item.key();
-        const auto& p = item.value();
-        if (p["TYPE"] == "Environment") {
-            load_hdri_pixels(json_name, p["PATH"]);
-            env.strength = p["STRENGTH"];
-        }
+
+    data.at("file").get_to(state.image_name);
+    data.at("iterations").get_to(state.iterations);
+    state.settings = data.value("settings", default_render_settings);
+    state.settings.env_strength = 0.f;
+    if (data.contains("environment")) {
+        const auto& e = data["environment"];
+        e.at("path").get_to(env.path);
+        state.settings.env_strength = e.at("strength");
+        load_hdri_pixels(json_name, env.path);
     }
 
-    const auto& materials_data = data["Materials"];
-    std::unordered_map<std::string, uint32_t> mat_name_to_id;
-    for (const auto& item : materials_data.items()) {
-        const auto& name = item.key();
-        const auto& p = item.value();
-        Material new_material{};
-        if (p["TYPE"] == "Diffuse") {
-            const auto& col = p["RGB"];
-            new_material.bsdf = Lambertian{glm::vec3(col[0], col[1], col[2])};
-            new_material.emission = glm::vec3(0);
-        } else if (p["TYPE"] == "Emitting") {
-            const auto& col = p["EMISSION"];
-            new_material.bsdf = Lambertian{};
-            new_material.emission =
-                glm::vec3(col[0], col[1], col[2]) * static_cast<float>(p["STRENGTH"]);
-        } else if (p["TYPE"] == "Conductor") {
-            const auto& eta = p["ETA"];
-            const auto& k = p["K"];
-            new_material.bsdf = Conductor{glm::vec3(eta[0], eta[1], eta[2]),
-                                          glm::vec3(k[0], k[1], k[2]), p.value("ROUGHNESS", 0.f),
-                                          glm::clamp(p.value("ANISOTROPY", 0.f), 0.f, 1.f)
-
-            };
-            new_material.emission = glm::vec3(0);
-        } else if (p["TYPE"] == "Dielectric") {
-            new_material.bsdf = Dielectric{p.value("IOR", 1.f), p.value("ROUGHNESS", 0.f)};
-            new_material.emission = glm::vec3(0);
-        }
-        material_names.push_back(name);
+    std::unordered_map<std::string, int> mat_name_to_id;
+    for (const auto& [name, m] : data.at("materials").items()) {
         mat_name_to_id[name] = materials.size();
-        materials.push_back(new_material);
+        material_names.push_back(name);
+        materials.push_back(m.get<Material>());
     }
-    const auto& objects_data = data["Objects"];
-    for (const auto& p : objects_data) {
-        const auto& type = p["TYPE"];
+
+    for (const auto& o : data.at("objects")) {
         Geom new_geom{};
-        if (type == "cube") {
-            new_geom.type = Cube;
-        } else if (type == "plane") {
-            new_geom.type = Plane;
-        } else if (type == "sdf") {
-            new_geom.type = Sdf;
-        } else {
-            new_geom.type = Sphere;
-        }
-        new_geom.material_id = mat_name_to_id[p["MATERIAL"]];
+        o.at("type").get_to(new_geom.type);
+        new_geom.material_id = mat_name_to_id.at(o.at("material").get<std::string>());
         if (is_emissive(materials[new_geom.material_id])) {
             Light new_light{};
             new_light.geom_id = geoms.size();
@@ -125,48 +175,40 @@ void Scene::load_from_json(const std::string& json_name) {
             new_geom.light_idx = lights.size();
             lights.push_back(new_light);
         }
-        Transform new_trans;
-        const auto& trans = p["TRANS"];
-        const auto& rotat = p["ROTAT"];
-        const auto& scale = p["SCALE"];
-        new_trans.translation = glm::vec3(trans[0], trans[1], trans[2]);
-        new_trans.rotation = glm::vec3(rotat[0], rotat[1], rotat[2]);
-        new_trans.scale = glm::vec3(scale[0], scale[1], scale[2]);
-        new_trans.matrix = utility_core::build_transformation_matrix(
-            new_trans.translation, new_trans.rotation, new_trans.scale);
-        new_trans.inverse = glm::inverse(new_trans.matrix);
-        new_trans.inv_transpose = glm::inverseTranspose(new_trans.matrix);
-        new_geom.transform = new_trans;
-
+        Transform& t = new_geom.transform;
+        o.at("transform").get_to(t);
+        t.matrix = utility_core::build_transformation_matrix(t.translation, t.rotation, t.scale);
+        t.inverse = glm::inverse(t.matrix);
+        t.inv_transpose = glm::inverseTranspose(t.matrix);
         geoms.push_back(new_geom);
     }
-    const auto& camera_data = data["Camera"];
-    CameraData& camera = state.camera;
-    RenderState& state = this->state;
-    camera.resolution.x = camera_data["RES"][0];
-    camera.resolution.y = camera_data["RES"][1];
-    float fovy = camera_data["FOVY"];
-    camera.lens_radius = camera_data["LENSRADIUS"];
-    camera.focal_distance = camera_data["FOCALDISTANCE"];
-    state.iterations = camera_data["ITERATIONS"];
-    state.settings = default_render_settings;
-    state.settings.max_depth = camera_data["DEPTH"];
-    state.settings.env_strength = env.strength;
-    state.image_name = camera_data["FILE"];
-    const auto& pos = camera_data["EYE"];
-    const auto& lookat = camera_data["LOOKAT"];
-    const auto& up = camera_data["UP"];
-    camera.position = glm::vec3(pos[0], pos[1], pos[2]);
-    camera.look_at = glm::vec3(lookat[0], lookat[1], lookat[2]);
-    camera.up = glm::vec3(up[0], up[1], up[2]);
 
-    camera.set_fov(fovy);
+    data.at("camera").get_to(state.camera);
+    state.image.assign(state.camera.resolution.x * state.camera.resolution.y, glm::vec3(0));
+}
 
-    camera.view = glm::normalize(camera.look_at - camera.position);
-    camera.right = glm::normalize(glm::cross(camera.view, camera.up));
+void Scene::save_to_json(const std::string& out_path) const {
+    const std::filesystem::path out_dir = std::filesystem::absolute(out_path).parent_path();
+    json data;
+    data["file"] = state.image_name;
+    data["iterations"] = state.iterations;
+    data["settings"] = state.settings;
+    if (!env.path.empty()) {
+        const auto src_dir = std::filesystem::absolute(filename).parent_path();
+        data["environment"] = {
+            {"path", std::filesystem::relative(src_dir / env.path, out_dir).generic_string()},
+            {"strength", state.settings.env_strength}};
+    }
+    for (size_t i = 0; i < materials.size(); ++i) {
+        data["materials"][material_names[i]] = materials[i];
+    }
+    for (const Geom& g : geoms) {
+        data["objects"].push_back({{"type", g.type},
+                                   {"material", material_names[g.material_id]},
+                                   {"transform", g.transform}});
+    }
+    data["camera"] = state.camera;
 
-    // set up render camera stuff
-    int arraylen = camera.resolution.x * camera.resolution.y;
-    state.image.resize(arraylen);
-    std::fill(state.image.begin(), state.image.end(), glm::vec3(0));
+    std::filesystem::create_directories(out_dir);
+    std::ofstream(out_path) << data.dump(4);
 }
