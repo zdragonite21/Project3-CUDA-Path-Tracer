@@ -66,14 +66,9 @@ void Scene::load_from_json(const std::string& json_name) {
     for (const auto& item : lights_data.items()) {
         const auto& name = item.key();
         const auto& p = item.value();
-        Light new_light{};
         if (p["TYPE"] == "Environment") {
-            new_light.geom_id = -1;
-            new_light.type = LightType::Environment;
             load_hdri_pixels(json_name, p["PATH"]);
             env.strength = p["STRENGTH"];
-            env.light_idx = lights.size();
-            lights.push_back(new_light);
         }
     }
 
@@ -126,7 +121,6 @@ void Scene::load_from_json(const std::string& json_name) {
         if (is_emissive(materials[new_geom.material_id])) {
             Light new_light{};
             new_light.geom_id = geoms.size();
-            new_light.type = LightType::Area;
             new_light.emission = materials[new_geom.material_id].emission;
             new_geom.light_idx = lights.size();
             lights.push_back(new_light);
@@ -157,6 +151,7 @@ void Scene::load_from_json(const std::string& json_name) {
     state.iterations = camera_data["ITERATIONS"];
     state.settings = default_render_settings;
     state.settings.max_depth = camera_data["DEPTH"];
+    state.settings.env_strength = env.strength;
     state.image_name = camera_data["FILE"];
     const auto& pos = camera_data["EYE"];
     const auto& lookat = camera_data["LOOKAT"];

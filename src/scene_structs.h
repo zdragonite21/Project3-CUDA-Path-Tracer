@@ -38,26 +38,15 @@ struct Geom {
     Geom() : type{}, material_id{}, light_idx(-1), transform{} {}
 };
 
-enum class LightType { Area, Environment };
-
-// for area lights, both light and material get the same emission (for convenience)
-// light -> geom -> material
+// area lights (light -> geom -> material)
 struct Light {
     glm::vec3 emission;
     int geom_id;
-    
-    LightType type;
 };
 
 struct Material {
     BsdfVariant bsdf;
     glm::vec3 emission;
-};
-
-struct DeviceEnvMap {
-    cudaTextureObject_t texture = 0;
-    float strength = 1.f;
-    int light_idx = -1;
 };
 
 struct PathSegment {
@@ -117,6 +106,7 @@ struct LightSample {
     glm::vec3 wi;
     float dist;
     float pdf;
+    // -1 for env
     int light_idx;
 };
 

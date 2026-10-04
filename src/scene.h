@@ -18,7 +18,6 @@ struct EnvironmentMap {
     int width = 0;
     int height = 0;
     float strength = 1.f;
-    int light_idx = -1;
     std::vector<glm::vec3> pixels;
 };
 

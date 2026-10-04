@@ -51,7 +51,8 @@ static Light* dev_lights = NULL;
 static MatId* dev_isect_mat_ids = NULL;
 static ShadowRay* dev_shadow_rays = NULL;
 static cudaArray_t env_array = NULL;
-static DeviceEnvMap device_env{};
+static cudaTextureObject_t env_texture;
+static LightSampler light_sampler{};
 
 cudaStream_t pt_stream;
 
@@ -110,10 +111,7 @@ void pathtrace_init(Scene* scene) {
         sampler.readMode = cudaReadModeElementType;
         sampler.normalizedCoords = 1;
 
-        cudaCreateTextureObject(&device_env.texture, &resource, &sampler, nullptr);
-
-        device_env.strength = scene->env.strength;
-        device_env.light_idx = scene->env.light_idx;
+        cudaCreateTextureObject(&env_texture, &resource, &sampler, nullptr);
     }
 
     check_cuda_error("pathtrace_init");
@@ -132,6 +130,18 @@ void pathtrace_reset(Scene* scene) {
                cudaMemcpyHostToDevice);
     cudaMemcpy(dev_lights, scene->lights.data(), scene->lights.size() * sizeof(Light),
                cudaMemcpyHostToDevice);
+
+    light_sampler.lights = dev_lights;
+    light_sampler.num_lights = static_cast<int>(scene->lights.size());
+    light_sampler.env_texture = env_texture;
+    bool has_env = env_texture != 0;
+    if (!has_env) {
+        light_sampler.p_env = 0.f;
+    } else if (light_sampler.num_lights == 0) {
+        light_sampler.p_env = 1.f;
+    } else {
+        light_sampler.p_env = 1.f / static_cast<float>(light_sampler.num_lights + 1);
+    }
 
     cudaMemset(dev_intersections, 0, num_pixels * sizeof(ShadeableIntersection));
     cudaMemset(dev_shadow_rays, 0, num_pixels * sizeof(ShadowRay));
@@ -152,7 +162,7 @@ void pathtrace_free() {
     cudaFree(dev_lights);
     cudaFree(dev_shadow_rays);
 
-    cudaDestroyTextureObject(device_env.texture);
+    cudaDestroyTextureObject(env_texture);
     cudaFreeArray(env_array);
 
     cudaStreamDestroy(pt_stream);
@@ -237,9 +247,8 @@ void pathtrace(uchar4* pbo, int iter) {
         sort_paths(num_paths, dev_intersections, dev_isect_mat_ids, dev_paths, pt_stream);
 #endif
         shade_material<<<num_blocks_path_segment_tracing, block_size_1d, 0, pt_stream>>>(
-            iter, num_paths, depth, host_scene->lights.size(), host_scene->geoms.size(),
-            dev_intersections, dev_isect_mat_ids, dev_paths, dev_shadow_rays, dev_materials,
-            dev_lights, dev_geoms, dev_image, device_env);
+            iter, num_paths, depth, dev_intersections, dev_isect_mat_ids, dev_paths,
+            dev_shadow_rays, dev_materials, light_sampler, dev_geoms, dev_image);
         check_cuda_error("shader material");
 
 #if LI_MIS

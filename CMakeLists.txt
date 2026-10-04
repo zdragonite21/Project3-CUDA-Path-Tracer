@@ -82,6 +82,7 @@ set(headers
     src/bsdf/disney_diffuse.cuh
     src/bsdf/microfacet.cuh
     src/bsdf/bsdf_structs.cuh
+    src/light_sampler.cuh
 )
 
 set(sources
