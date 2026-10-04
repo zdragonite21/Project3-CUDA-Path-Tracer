@@ -8,21 +8,13 @@
 #include <cuda_runtime.h>
 #include <glm/glm.hpp>
 
-__device__ __forceinline__ float pdf_diffuse(glm::vec3 wi) {
-    return bx::non_neg_cos(wi) * INV_PI;
+__device__ __forceinline__ BsdfEval eval_pdf_diffuse(glm::vec3 wi, const Lambertian& m) {
+    float c = fmaxf(0.f, bx::cos_theta(wi));
+    return BsdfEval{m.color * INV_PI * c, c * INV_PI};
 }
 
-__device__ __forceinline__ glm::vec3 eval_diffuse(glm::vec3 wi, const Lambertian& m) {
-    return m.color * INV_PI * max(0.f, bx::cos_theta(wi));
-}
-
-__device__ __forceinline__ BsdfSample sample_diffuse(glm::vec3 p, const Lambertian& m,
-                                                     RngEng& rng) {
-    BsdfSample sample;
-    sample.wi = calculate_random_direction_in_cosine_hemisphere(rng);
-    sample.pdf = pdf_diffuse(sample.wi);
-    sample.f = eval_diffuse(sample.wi, m);
-    sample.type = BxdfFlag::Diffuse;
-
-    return sample;
+__device__ __forceinline__ BsdfSample sample_diffuse(const Lambertian& m, RngEng& rng) {
+    glm::vec3 wi = calculate_random_direction_in_cosine_hemisphere(rng);
+    BsdfEval e = eval_pdf_diffuse(wi, m);
+    return {wi, e.pdf, e.f, BxdfFlag::Diffuse};
 }

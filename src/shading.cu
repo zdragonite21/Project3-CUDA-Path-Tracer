@@ -41,13 +41,19 @@ __device__ glm::vec3 eval_environment(const DeviceEnvMap& env, glm::vec3 wi) {
 }
 
 __device__ cstd::optional<ShadowRay>
-estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor, const Material& m,
-                         RngEng& rng, const Light* lights, int num_lights, const Geom* geoms,
-                         int num_geoms, const DeviceEnvMap& env) {
+estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor,
+                         const glm::mat3& to_world, glm::vec3 wo, const Material& m, RngEng& rng,
+                         const Light* lights, int num_lights, const Geom* geoms, int num_geoms,
+                         const DeviceEnvMap& env) {
     cstd::optional<LightSample> ls =
         sample_direct_light(p, nor, lights, num_lights, geoms, num_geoms, rng);
 
     if (!ls || ls->pdf == 0.f) {
+        return cstd::nullopt;
+    }
+
+    BsdfEval be = eval_pdf_bsdf(wo, ls->wi * to_world, m);
+    if (be.f == glm::vec3(0.f)) {
         return cstd::nullopt;
     }
 
@@ -56,10 +62,7 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor, co
     glm::vec3 li =
         light.type == LightType::Environment ? eval_environment(env, ls->wi) : light.emission;
 
-    glm::vec3 bsdf_f = eval_bsdf(p, nor, -path.ray.dir, ls->wi, m);
-    float bsdf_p = pdf_bsdf(p, nor, -path.ray.dir, ls->wi, m);
-
-    float w = path.remaining_bounces > 1 ? power_heuristic(ls->pdf, bsdf_p) : 1.f;
+    float w = path.remaining_bounces > 1 ? power_heuristic(ls->pdf, be.pdf) : 1.f;
 
     ShadowRay sray{};
     sray.ray = bx::spawn_ray(p, ls->wi, nor);
@@ -67,28 +70,26 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor, co
     // so we don't intersect with the same light when tracing shadow rays
     sray.t_max = light.type == LightType::Environment ? FLT_MAX : ls->dist - numeric::shadow_margin;
 
-    sray.contribution = path.throughput * li * bsdf_f * w / ls->pdf;
+    sray.contribution = path.throughput * li * be.f * w / ls->pdf;
 
     return sray;
 }
 
-__device__ void scatter_ray(PathSegment& path_segment, glm::vec3 p, glm::vec3 normal,
-                            const Material& m, RngEng& rng) {
-    
-    glm::mat3 to_world = bx::local_to_world(normal);
-    glm::vec3 wo_local = glm::transpose(to_world) * -path_segment.ray.dir;
-    BsdfSample bs = sample_bsdf(p, normal, wo_local, to_world, m, rng);
-
+__device__ void scatter_ray(PathSegment& path, glm::vec3 p, glm::vec3 nor,
+                            const glm::mat3& to_world, glm::vec3 wo, const Material& m,
+                            RngEng& rng) {
+    BsdfSample bs = sample_bsdf(wo, m, rng);
     if (bs.type == BxdfFlag::Unset || bs.pdf == 0.f) {
-        path_segment.throughput = glm::vec3(0.f);
-        terminate_path(path_segment);
-    } else {
-        path_segment.throughput *= bs.f / bs.pdf;
-        path_segment.prev_was_delta = (bs.type & BxdfFlag::Specular) != BxdfFlag::Unset;
-        path_segment.prev_bsdf_pdf = bs.pdf;
-        path_segment.ray = bx::spawn_ray(p, bs.wi, normal);
-        path_segment.remaining_bounces--;
+        path.throughput = glm::vec3(0.f);
+        terminate_path(path);
+        return;
     }
+
+    path.throughput *= bs.f / bs.pdf;
+    path.prev_was_delta = (bs.type & BxdfFlag::Specular) != BxdfFlag::Unset;
+    path.prev_bsdf_pdf = bs.pdf;
+    path.ray = bx::spawn_ray(p, to_world * bs.wi, nor);
+    path.remaining_bounces--;
 }
 
 __global__ void shade_material(int iter, int num_paths, int depth, int num_lights, int num_geoms,
@@ -155,21 +156,23 @@ __global__ void shade_material(int iter, int num_paths, int depth, int num_light
     RngEng rng = make_seeded_rng(iter, idx, depth);
     glm::vec3 p = get_point_on_ray(path.ray, intersection.t);
     const glm::vec3& nor = intersection.surface_normal;
+    glm::mat3 to_world = bx::local_to_world(nor);
+    glm::vec3 wo = -path.ray.dir * to_world;
 
 #if LI_MIS
     if (!is_delta(material)) {
         // if not delta (so change this when I add microfacet)
         cstd::optional<ShadowRay> sray = estimate_direct_lighting(
-            path, p, nor, material, rng, lights, num_lights, geoms, num_geoms, env);
+            path, p, nor, to_world, wo, material, rng, lights, num_lights, geoms, num_geoms, env);
 
         if (sray) {
             shadow_rays[idx] = *sray;
         }
     }
 
-    scatter_ray(path, p, nor, material, rng);
+    scatter_ray(path, p, nor, to_world, wo, material, rng);
 #else
-    scatter_ray(path, p, nor, material, rng);
+    scatter_ray(path, p, nor, to_world, wo, material, rng);
 #endif
 
 #if RUSSIAN_ROULETTE

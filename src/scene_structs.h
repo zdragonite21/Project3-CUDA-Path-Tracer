@@ -108,6 +108,11 @@ struct BsdfSample {
     BxdfFlag type;
 };
 
+struct BsdfEval {
+    glm::vec3 f;
+    float pdf;
+};
+
 struct LightSample {
     glm::vec3 wi;
     float dist;

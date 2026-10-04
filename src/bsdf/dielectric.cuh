@@ -9,8 +9,7 @@
 #include <glm/glm.hpp>
 
 // assumes the medium is air and not spectral
-__device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm::vec3 wo, float ior,
-                                                               RngEng& rng) {
+__device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 wo, float ior, RngEng& rng) {
     BsdfSample sample;
     UnifDist<float> u01(0, 1);
 
@@ -48,28 +47,16 @@ __device__ __forceinline__ BsdfSample sample_smooth_dielectric(glm::vec3 p, glm:
     return sample;
 }
 
-__device__ __forceinline__ float pdf_dielectric(glm::vec3 wi, glm::vec3 wo, const Dielectric& m) {
-    if (m.roughness == 0.f) {
-        return 0.f;
-    }
-
-    return 0.f;
+__device__ __forceinline__ BsdfEval eval_pdf_dielectric(glm::vec3 wo, glm::vec3 wi,
+                                                       const Dielectric& m) {
+    return BsdfEval{};
 }
 
-__device__ __forceinline__ glm::vec3 eval_dielectric(glm::vec3 wi, glm::vec3 wo,
-                                                    const Dielectric& m) {
-    if (m.roughness == 0.f) {
-        return glm::vec3(0);
-    }
-
-    return glm::vec3(0);
-}
-
-__device__ __forceinline__ BsdfSample sample_dielectric(glm::vec3 p, glm::vec3 wo,
-                                                        const Dielectric& m, RngEng& rng) {
+__device__ __forceinline__ BsdfSample sample_dielectric(glm::vec3 wo, const Dielectric& m,
+                                                        RngEng& rng) {
     BsdfSample sample{};
     if (m.roughness == 0.f) {
-        sample = sample_smooth_dielectric(p, wo, m.ior, rng);
+        sample = sample_smooth_dielectric(wo, m.ior, rng);
     }
 
     return sample;

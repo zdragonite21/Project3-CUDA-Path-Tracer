@@ -30,55 +30,35 @@ __device__ __forceinline__ float ggx_d(glm::vec3 wh, float ax, float ay) {
     return 1.f / denom;
 }
 
-__device__ __forceinline__ float ggx_g1(glm::vec3 w, float ax, float ay) {
-    return 1.f / (1.f + ggx_lambda(w, ax, ay));
-}
+struct GgxEval {
+    float dg;
+    float pdf;
+    glm::vec3 wh;
+};
 
-__device__ __forceinline__ float ggx_g2(glm::vec3 wo, glm::vec3 wi, float ax, float ay) {
-    return 1.f / (1.f + ggx_lambda(wi, ax, ay) + ggx_lambda(wo, ax, ay));
-}
-
-__device__ __forceinline__ float pdf_ggx(glm::vec3 wo, glm::vec3 wi, float anis, float rough) {
-    if (bx::cos_theta(wi) * bx::cos_theta(wo) <= 0.f) {
-        // no transmission
-        return 0.f;
+__device__ __forceinline__ GgxEval eval_pdf_ggx(glm::vec3 wo, glm::vec3 wi, float ax, float ay) {
+    GgxEval r{};
+    if (bx::cos_theta(wo) * bx::cos_theta(wi) <= 0.f) {
+        return r;
     }
 
-    float len = glm::length(wi + wo);
-    if (len <= 0) {
-        return 0.f;
+    glm::vec3 h = wo + wi;
+    float len2 = glm::dot(h, h);
+    if (len2 <= 0.f) {
+        return r;
     }
-    glm::vec3 wh = (wi + wo) / len;
-    wh = wh.z < 0 ? -wh : wh;
+    h *= rsqrtf(len2);
+    h = h.z < 0.f ? -h : h;
 
-    float wo_cos = bx::abs_cos(wo);
+    float d = ggx_d(h, ax, ay);
+    float lo = ggx_lambda(wo, ax, ay);
+    float li = ggx_lambda(wi, ax, ay);
+    float inv_4cos = 1.f / (4.f * bx::abs_cos(wo));
 
-    glm::vec2 a = ggx_alpha(anis, rough);
-    float d = ggx_d(wh, a.x, a.y);
-    float g1 = ggx_g1(wo, a.x, a.y);
-
-    return d * g1 / (4.f * wo_cos);
-}
-
-__device__ __forceinline__ float eval_ggx_dg(glm::vec3 wo, glm::vec3 wi, float anis, float rough) {
-    if (bx::cos_theta(wi) * bx::cos_theta(wo) <= 0.f) {
-        // no transmission
-        return 0.f;
-    }
-
-    float len = glm::length(wi + wo);
-    if (len <= 0) {
-        return 0.f;
-    }
-    glm::vec3 wh = (wi + wo) / len;
-    wh = wh.z < 0 ? -wh : wh;
-
-    glm::vec2 a = ggx_alpha(anis, rough);
-
-    float d = ggx_d(wh, a.x, a.y);
-    float g = ggx_g2(wi, wo, a.x, a.y);
-
-    return d * g / (4.f * bx::abs_cos(wo));
+    r.dg = d / (1.f + lo + li) * inv_4cos;
+    r.pdf = d / (1.f + lo) * inv_4cos;
+    r.wh = h;
+    return r;
 }
 
 // Dupuy & Benyoub 2023
@@ -90,23 +70,4 @@ __device__ __forceinline__ glm::vec3 sample_ggx_vndf(glm::vec3 wo, float ax, flo
 
     glm::vec3 wh_std = c + wo_std;
     return glm::normalize(glm::vec3(wh_std.x * ax, wh_std.y * ay, wh_std.z));
-}
-
-__device__ __forceinline__ BsdfSample sample_ggx(glm::vec3 p, glm::vec3 wo, float anis, float rough,
-                                                 RngEng& rng) {
-    BsdfSample sample{};
-
-    glm::vec2 a = ggx_alpha(anis, rough);
-    glm::vec3 wh = sample_ggx_vndf(wo, a.x, a.y, rng);
-    glm::vec3 wi = glm::reflect(-wo, wh);
-    if (bx::cos_theta(wi) <= 0.f) {
-        return sample;
-    }
-
-    sample.wi = wi;
-    sample.pdf = pdf_ggx(wi, wo, anis, rough);
-    sample.f = glm::vec3(eval_ggx_dg(wi, wo, anis, rough));
-    sample.type = BxdfFlag::Glossy | BxdfFlag::Reflection;
-
-    return sample;
 }
