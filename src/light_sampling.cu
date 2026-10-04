@@ -93,10 +93,7 @@ __device__ cstd::optional<LightSample> sample_area_light(glm::vec3 p, const Ligh
     }
 }
 
-// choose a light to sample
 __device__ cstd::optional<LightSample> sample_direct_light(glm::vec3 p, glm::vec3 nor,
-                                                           const Light* lights, int num_lights,
-                                                           const Geom* geoms, int num_geoms,
                                                            const LightSampler& s,
                                                            const Geom* geoms, RngEng& rng) {
     if (s.p_env == 0.f && s.num_lights == 0) {
