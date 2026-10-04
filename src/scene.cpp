@@ -48,6 +48,7 @@ template <glm::length_t L, typename T, glm::qualifier Q> struct adl_serializer<g
 } // namespace nlohmann
 
 // struct macros
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Emission, color, strength)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Lambertian, color)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Conductor, eta, k, roughness, anisotropy)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
@@ -78,16 +79,7 @@ void from_json(const json& j, Material& m) {
     } else {
         throw std::runtime_error("unknown material type " + type);
     }
-    m.emission = j.value("emission", glm::vec3(0.f));
-}
-
-void to_json(json& j, const Light& l) {
-    const float strength = glm::max(l.emission.x, glm::max(l.emission.y, l.emission.z));
-    j = {{"color", strength > 0.f ? l.emission / strength : l.emission}, {"strength", strength}};
-}
-
-void from_json(const json& j, Light& l) {
-    l.emission = j.at("color").get<glm::vec3>() * j.at("strength").get<float>();
+    m.emission = j.value("emission", Emission{});
 }
 
 void to_json(json& j, const CameraData& c) {
@@ -118,6 +110,7 @@ Scene::Scene(string filename) : filename(filename) {
     auto ext = filename.substr(filename.find_last_of('.'));
     if (ext == ".json") {
         load_from_json(filename);
+        scan_hdris();
         return;
     } else {
         cout << "Couldn't read from " << filename << endl;
@@ -186,8 +179,7 @@ void Scene::load_from_json(const std::string& json_name) {
             }
             new_geom.role = GeomRole::Light;
             new_geom.id = lights.size();
-            Light& l = lights.emplace_back(o["light"].get<Light>());
-            l.geom_id = geoms.size();
+            lights.push_back({o["light"].get<Emission>(), static_cast<int>(geoms.size())});
         } else {
             new_geom.role = GeomRole::Material;
             new_geom.id = mat_name_to_id.at(o["material"].get<std::string>());
@@ -223,7 +215,7 @@ void Scene::save_to_json(const std::string& out_path) const {
     for (const Geom& g : geoms) {
         json o = {{"type", g.type}, {"transform", g.transform}};
         if (g.role == GeomRole::Light) {
-            o["light"] = lights[g.id];
+            o["light"] = lights[g.id].emission;
         } else {
             o["material"] = material_names[g.id];
         }
@@ -234,4 +226,25 @@ void Scene::save_to_json(const std::string& out_path) const {
 
     std::filesystem::create_directories(out_dir);
     std::ofstream(out_path) << data.dump(4);
+}
+
+void Scene::scan_hdris() {
+    std::error_code ec;
+    for (const auto& e : std::filesystem::recursive_directory_iterator(HDRI_DIR, ec)) {
+        if (e.path().extension() == ".hdr") {
+            hdri_names.push_back(e.path().lexically_relative(HDRI_DIR).generic_string());
+        }
+    }
+}
+
+void Scene::set_environment(const std::string& hdri_path) {
+    env = {};
+    if (hdri_path.empty()) {
+        return;
+    }
+    const auto scene_dir = std::filesystem::absolute(filename).parent_path();
+    const std::string path =
+        std::filesystem::proximate(std::filesystem::absolute(hdri_path), scene_dir).generic_string();
+    load_hdri_pixels(filename, path);
+    env.path = path;
 }

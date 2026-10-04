@@ -22,19 +22,18 @@ struct EnvironmentMap {
     std::vector<glm::vec3> pixels;
 };
 
-struct Emission {
-    float color;
-    glm::vec3 strength;
-};
+inline constexpr const char* HDRI_DIR = "assets/hdri";
 
 class Scene {
   private:
     void load_hdri_pixels(const std::string& json_name, const std::string& hdri_path);
     void load_from_json(const std::string& json_name);
+    void scan_hdris();
 
   public:
     Scene(std::string filename);
     void save_to_json(const std::string& out_path) const;
+    void set_environment(const std::string& hdri_path);
 
     std::string filename;
 
@@ -42,9 +41,7 @@ class Scene {
     std::vector<std::string> material_names;
     std::vector<Material> materials;
     std::vector<Light> lights;
-
-    std::vector<Emission> lights_emission;
-    std::vector<Emission> materials_emssion;
+    std::vector<std::string> hdri_names;
 
     RenderState state;
     EnvironmentMap env;

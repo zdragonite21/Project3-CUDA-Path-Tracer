@@ -13,5 +13,5 @@ __device__ __forceinline__ bool is_delta(const Material& m) {
 }
 
 __device__ __forceinline__ bool is_emissive(const Material& m) {
-    return glm::dot(m.emission, m.emission) > 0.f;
+    return m.emission.strength > 0.f;
 }

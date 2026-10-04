@@ -21,7 +21,7 @@
         "light": {
             "type": "diffuse",
             "color": [0, 0, 0],
-            "emission": [5.0, 5.0, 5.0]
+            "emission": {"color": [1.0, 1.0, 1.0], "strength": 5.0}
         }
     },
     "objects": [

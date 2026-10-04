@@ -7,6 +7,7 @@
 #include "render_settings.h"
 #include "scene.h"
 #include <cfloat>
+#include <filesystem>
 
 void gui::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -40,18 +41,42 @@ static bool camera_section(CameraData& cam) {
     return reset;
 }
 
+static void environment_section(const Scene& scene, GuiDataContainer& d) {
+    namespace fs = std::filesystem;
+    const fs::path current = fs::path(scene.filename).parent_path() / scene.env.path;
+    const std::string preview = scene.env.path.empty() ? "none" : current.filename().string();
+    if (!ImGui::BeginCombo("hdri", preview.c_str())) {
+        return;
+    }
+    if (ImGui::Selectable("none", scene.env.path.empty())) {
+        d.env_requested = true;
+        d.env_path.clear();
+    }
+    const fs::path current_abs = fs::absolute(current).lexically_normal();
+    for (const std::string& name : scene.hdri_names) {
+        const fs::path path = fs::path(HDRI_DIR) / name;
+        const bool selected =
+            !scene.env.path.empty() && fs::absolute(path).lexically_normal() == current_abs;
+        if (ImGui::Selectable(name.c_str(), selected)) {
+            d.env_requested = true;
+            d.env_path = path.generic_string();
+        }
+    }
+    ImGui::EndCombo();
+}
+
+static bool emission_edit(Emission& e) {
+    bool reset = ImGui::ColorEdit3("emission", &e.color.x, ImGuiColorEditFlags_Float);
+    reset |= ImGui::DragFloat("strength", &e.strength, 0.1f, 0.f, FLT_MAX);
+    return reset;
+}
+
 static bool lights_section(Scene& scene) {
     bool reset = false;
     for (int i = 0; i < scene.lights.size(); ++i) {
-        Light& light = scene.lights[i];
         ImGui::PushID(i);
-        if (ImGui::TreeNode("Light")) {
-            float strength = length(light.emission);
-            glm::vec3 color = strength == 0.f ? glm::vec3(1) : light.emission / strength;
-            reset |= ImGui::ColorEdit3("color", &color.x,
-                                       ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
-            reset |= ImGui::DragFloat("strength", &strength, 0.1f, 0.f, FLT_MAX);
-            light.emission = strength * color;
+        if (ImGui::TreeNode("light", "light %d", i)) {
+            reset |= emission_edit(scene.lights[i].emission);
             ImGui::TreePop();
         }
         ImGui::PopID();
@@ -76,8 +101,7 @@ static bool materials_section(Scene& scene) {
         ImGui::PushID(i);
         if (ImGui::TreeNode(scene.material_names[i].c_str())) {
             reset |= cuda::std::visit([](auto& b) { return draw_bsdf(b); }, mat.bsdf);
-            reset |= ImGui::ColorEdit3("emission", &mat.emission.x,
-                                       ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+            reset |= emission_edit(mat.emission);
             ImGui::TreePop();
         }
         ImGui::PopID();
@@ -111,6 +135,7 @@ bool gui::render_imgui(GuiRefs& refs) {
 
     if (ImGui::CollapsingHeader("Render", ImGuiTreeNodeFlags_DefaultOpen)) {
         reset |= render_section(s);
+        environment_section(*refs.scene, d);
     }
     if (ImGui::CollapsingHeader("Lights")) {
         reset |= lights_section(*refs.scene);

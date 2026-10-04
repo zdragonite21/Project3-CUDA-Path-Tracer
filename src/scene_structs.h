@@ -42,15 +42,21 @@ struct Geom {
     Transform transform;
 };
 
+struct Emission {
+    glm::vec3 color{1.f};
+    float strength = 0.f;
+    __host__ __device__ glm::vec3 radiance() const { return color * strength; }
+};
+
 // area lights (light -> geom)
 struct Light {
-    glm::vec3 emission;
+    Emission emission;
     int geom_id;
 };
 
 struct Material {
     BsdfVariant bsdf;
-    glm::vec3 emission;
+    Emission emission;
 };
 
 struct PathSegment {

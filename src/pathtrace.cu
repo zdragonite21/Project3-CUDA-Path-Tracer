@@ -70,6 +70,49 @@ void init_data_container(GuiDataContainer* imgui_data) {
     gui_data = imgui_data;
 }
 
+static void free_env() {
+    if (env_texture) {
+        cudaDestroyTextureObject(env_texture);
+        cudaFreeArray(env_array);
+    }
+    env_texture = 0;
+    env_array = nullptr;
+}
+
+void pathtrace_upload_env(const Scene& s) {
+    cudaStreamSynchronize(pt_stream);
+    free_env();
+    if (s.env.pixels.empty()) {
+        return;
+    }
+
+    std::vector<float4> upload_pixels(s.env.pixels.size());
+
+    for (size_t i = 0; i < upload_pixels.size(); ++i) {
+        const glm::vec3 rgb = s.env.pixels[i];
+        upload_pixels[i] = make_float4(rgb.r, rgb.g, rgb.b, 1.0f);
+    }
+
+    const cudaChannelFormatDesc format = cudaCreateChannelDesc<float4>();
+    cudaMallocArray(&env_array, &format, s.env.width, s.env.height);
+    const size_t row_bytes = static_cast<size_t>(s.env.width) * sizeof(float4);
+    cudaMemcpy2DToArray(env_array, 0, 0, upload_pixels.data(), row_bytes, row_bytes,
+                        s.env.height, cudaMemcpyHostToDevice);
+
+    cudaResourceDesc resource{};
+    resource.resType = cudaResourceTypeArray;
+    resource.res.array.array = env_array;
+
+    cudaTextureDesc sampler{};
+    sampler.addressMode[0] = cudaAddressModeWrap;
+    sampler.addressMode[1] = cudaAddressModeClamp;
+    sampler.filterMode = cudaFilterModeLinear;
+    sampler.readMode = cudaReadModeElementType;
+    sampler.normalizedCoords = 1;
+
+    cudaCreateTextureObject(&env_texture, &resource, &sampler, nullptr);
+}
+
 void pathtrace_init(Scene* scene) {
     const CameraData& cam = scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
@@ -85,34 +128,7 @@ void pathtrace_init(Scene* scene) {
 
     cudaStreamCreate(&pt_stream);
 
-    // environment map uploading
-    if (!scene->env.pixels.empty()) {
-        std::vector<float4> upload_pixels(scene->env.pixels.size());
-
-        for (size_t i = 0; i < upload_pixels.size(); ++i) {
-            const glm::vec3 rgb = scene->env.pixels[i];
-            upload_pixels[i] = make_float4(rgb.r, rgb.g, rgb.b, 1.0f);
-        }
-
-        const cudaChannelFormatDesc format = cudaCreateChannelDesc<float4>();
-        cudaMallocArray(&env_array, &format, scene->env.width, scene->env.height);
-        const size_t row_bytes = static_cast<size_t>(scene->env.width) * sizeof(float4);
-        cudaMemcpy2DToArray(env_array, 0, 0, upload_pixels.data(), row_bytes, row_bytes,
-                            scene->env.height, cudaMemcpyHostToDevice);
-
-        cudaResourceDesc resource{};
-        resource.resType = cudaResourceTypeArray;
-        resource.res.array.array = env_array;
-
-        cudaTextureDesc sampler{};
-        sampler.addressMode[0] = cudaAddressModeWrap;
-        sampler.addressMode[1] = cudaAddressModeClamp;
-        sampler.filterMode = cudaFilterModeLinear;
-        sampler.readMode = cudaReadModeElementType;
-        sampler.normalizedCoords = 1;
-
-        cudaCreateTextureObject(&env_texture, &resource, &sampler, nullptr);
-    }
+    pathtrace_upload_env(*scene);
 
     check_cuda_error("pathtrace_init");
 }
@@ -162,10 +178,7 @@ void pathtrace_free() {
     cudaFree(dev_lights);
     cudaFree(dev_shadow_rays);
 
-    cudaDestroyTextureObject(env_texture);
-    cudaFreeArray(env_array);
-    env_texture = 0;
-    env_array = nullptr;
+    free_env();
 
     cudaStreamDestroy(pt_stream);
 

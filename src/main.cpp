@@ -349,6 +349,19 @@ void main_loop() {
         gui::end_frame();
         glfwSwapBuffers(window);
 
+        if (gui_data->env_requested) {
+            gui_data->env_requested = false;
+            try {
+                scene->set_environment(gui_data->env_path);
+            } catch (const std::exception& e) {
+                std::cerr << e.what() << '\n';
+            }
+            if (!scene->env.pixels.empty() && render_state->settings.env_strength == 0.f) {
+                render_state->settings.env_strength = 1.f;
+            }
+            pathtrace_upload_env(*scene);
+            needs_reset = true;
+        }
         if (gui_data->load_requested) {
             gui_data->load_requested = false;
             std::string path = open_scene_dialog();

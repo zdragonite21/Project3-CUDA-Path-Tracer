@@ -57,7 +57,7 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor,
 
     bool is_env = ls->light_idx < 0;
     glm::vec3 li =
-        is_env ? eval_environment(s.env_texture, ls->wi) : s.lights[ls->light_idx].emission;
+        is_env ? eval_environment(s.env_texture, ls->wi) : s.lights[ls->light_idx].emission.radiance();
 
     float w = path.remaining_bounces > 1 ? power_heuristic(ls->pdf, be.pdf) : 1.f;
 
@@ -126,16 +126,16 @@ __global__ void shade_material(int iter, int num_paths, int depth,
         const Light& light = light_sampler.lights[shadeable_intersections[idx].light_idx];
 #if LI_MIS
         if (depth == 0 || path.prev_was_delta) {
-            image[path.pixel_index] += path.throughput * light.emission;
+            image[path.pixel_index] += path.throughput * light.emission.radiance();
         } else {
             // light sampling
             float li_pdf = pmf_area(light_sampler) * pdf_area_light(path.ray, light, geoms);
 
             float w = power_heuristic(path.prev_bsdf_pdf, li_pdf);
-            image[path.pixel_index] += w * path.throughput * light.emission;
+            image[path.pixel_index] += w * path.throughput * light.emission.radiance();
         }
 #else
-        image[path.pixel_index] += path.throughput * light.emission;
+        image[path.pixel_index] += path.throughput * light.emission.radiance();
 #endif
         terminate_path(path_segments[idx]);
         return;
@@ -144,7 +144,7 @@ __global__ void shade_material(int iter, int num_paths, int depth,
     // bounce
     Material material = materials[mat_id];
     if (is_emissive(material)) {
-        image[path.pixel_index] += path.throughput * material.emission;
+        image[path.pixel_index] += path.throughput * material.emission.radiance();
     }
 
     ShadeableIntersection intersection = shadeable_intersections[idx];
