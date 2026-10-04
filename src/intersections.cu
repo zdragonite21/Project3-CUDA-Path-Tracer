@@ -180,12 +180,17 @@ __device__ bool visible_to_light(Ray r, float light_dist, const Geom* geoms, int
 
     for (int i = 0; i < num_geoms; ++i) {
         const Geom& geom = geoms[i];
+        bool outside = true;
         switch (geom.type) {
         case GeomType::Cube:
             t = box_intersection_test(geom, r, nullptr, nullptr, nullptr);
             break;
         case GeomType::Plane:
-            t = plane_intersection_test(geom, r, nullptr, nullptr, nullptr);
+            t = plane_intersection_test(geom, r, nullptr, nullptr, &outside);
+            // only intersect with one side
+            if (outside) {
+                continue;
+            }
             break;
         case GeomType::Sphere:
             t = sphere_intersection_test(geom, r, nullptr, nullptr, nullptr);

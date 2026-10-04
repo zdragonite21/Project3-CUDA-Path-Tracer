@@ -4,14 +4,14 @@
 #define ERRORCHECK 0
 
 #define SORT_PATHS 0
-#define COMPACT_TERMINATED 1
+#define COMPACT_TERMINATED 0
 
 #define LI_MIS 1
 #define RUSSIAN_ROULETTE 1
 
 namespace numeric {
 constexpr float ray_offset = 1e-3f;
-constexpr float shadow_margin = 1e-2f;
+constexpr float shadow_margin = 1e-3f;
 constexpr float min_cos = 1e-4f;
 } // namespace numeric
 

@@ -65,7 +65,12 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor,
     sray.ray = bx::spawn_ray(p, ls->wi, nor);
     sray.pixel_index = path.pixel_index;
     // so we don't intersect with the same light when tracing shadow rays
-    sray.t_max = is_env ? FLT_MAX : ls->dist - numeric::shadow_margin;
+    if (is_env) {
+        sray.t_max = FLT_MAX;
+    } else {
+        glm::vec3 light_p = p + ls->wi * ls->dist;
+        sray.t_max = glm::dot(light_p - sray.ray.org, ls->wi) * (1.f - numeric::shadow_margin);
+    }
 
     sray.contribution = path.throughput * li * be.f * w / ls->pdf;
 
@@ -95,11 +100,13 @@ __global__ void shade_material(int iter, int num_paths, int depth,
                                ShadowRay* shadow_rays, const Material* materials,
                                LightSampler light_sampler, const Geom* geoms, glm::vec3* image) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= num_paths || path_segments[idx].remaining_bounces <= 0) {
+    if (idx >= num_paths) {
         return;
     }
-
     shadow_rays[idx].pixel_index = -1;
+    if (path_segments[idx].remaining_bounces <= 0) {
+        return;
+    }
 
     // miss / environment
 
