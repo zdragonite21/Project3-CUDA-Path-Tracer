@@ -46,5 +46,12 @@ struct DisneyMetal {
     }
 };
 
-using BsdfVariant =
-    cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse, DisneyMetal>;
+struct DisneyClearcoat {
+    float gloss;
+    __device__ bool is_delta() const {
+        return false;
+    }
+};
+
+using BsdfVariant = cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse,
+                                       DisneyMetal, DisneyClearcoat>;

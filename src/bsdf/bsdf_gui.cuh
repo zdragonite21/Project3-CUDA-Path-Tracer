@@ -34,3 +34,6 @@ static bool draw_bsdf(DisneyMetal& m) {
     r |= ImGui::SliderFloat("anisotropic", &m.anisotropic, 0.f, 1.f);
     return r;
 }
+static bool draw_bsdf(DisneyClearcoat& m) {
+    return ImGui::SliderFloat("gloss", &m.gloss, 0.f, 1.f);
+}

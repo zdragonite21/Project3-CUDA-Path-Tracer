@@ -4,6 +4,7 @@
 #include "dielectric.cuh"
 #include "diffuse.cuh"
 #include "disney_diffuse.cuh"
+#include "disney_clearcoat.cuh"
 #include "disney_metal.cuh"
 
 struct EvalPdfOp {
@@ -22,6 +23,9 @@ struct EvalPdfOp {
     }
     __device__ BsdfEval operator()(const DisneyMetal& m) const {
         return eval_pdf_disney_metal(wo, wi, m);
+    }
+    __device__ BsdfEval operator()(const DisneyClearcoat& m) const {
+        return eval_pdf_disney_clearcoat(wo, wi, m);
     }
 };
 
@@ -42,6 +46,9 @@ struct SampleOp {
     }
     __device__ BsdfSample operator()(const DisneyMetal& m) const {
         return sample_disney_metal(wo, m, rng);
+    }
+    __device__ BsdfSample operator()(const DisneyClearcoat& m) const {
+        return sample_disney_clearcoat(wo, m, rng);
     }
 };
 

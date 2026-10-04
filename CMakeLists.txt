@@ -81,6 +81,7 @@ set(headers
     src/bsdf/conductor.cuh
     src/bsdf/disney_diffuse.cuh
     src/bsdf/disney_metal.cuh
+    src/bsdf/disney_clearcoat.cuh
     src/bsdf/microfacet.cuh
     src/bsdf/bsdf_structs.cuh
     src/light_sampler.cuh

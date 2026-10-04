@@ -47,6 +47,10 @@
             "roughness": 0.5,
             "anisotropic": 0
         },
+        "disney clearcoat": {
+            "type": "disney clearcoat",
+            "gloss": 0.5
+        },
         "glass": {
             "type": "dielectric",
             "ior": 1.5,
@@ -143,7 +147,7 @@
         },
         {
             "type": "sphere",
-            "material": "diffuse_green",
+            "material": "disney clearcoat",
             "transform": {
                 "translation": [-1.0, 1.0, -3.0],
                 "rotation": [0.0, 0.0, 0.0],
