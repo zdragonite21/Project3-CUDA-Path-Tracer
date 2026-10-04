@@ -60,6 +60,11 @@ void upload_settings(const RenderSettings& s) {
     cudaMemcpyToSymbolAsync(c_settings, &s, sizeof(s), 0, cudaMemcpyHostToDevice, pt_stream);
 }
 
+void upload_materials(const Scene& s) {
+    cudaMemcpyAsync(dev_materials, s.materials.data(), s.materials.size() * sizeof(Material),
+                    cudaMemcpyHostToDevice, pt_stream);
+}
+
 void init_data_container(GuiDataContainer* imgui_data) {
     gui_data = imgui_data;
 }
@@ -117,6 +122,7 @@ void pathtrace_init(Scene* scene) {
 void pathtrace_reset(Scene* scene) {
     host_scene = scene;
     upload_settings(scene->state.settings);
+    upload_materials(*scene);
 
     const CameraData& cam = host_scene->state.camera;
     const int num_pixels = cam.resolution.x * cam.resolution.y;
@@ -124,11 +130,7 @@ void pathtrace_reset(Scene* scene) {
     cudaMemset(dev_image, 0, num_pixels * sizeof(glm::vec3));
     cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom),
                cudaMemcpyHostToDevice);
-
     cudaMemcpy(dev_lights, scene->lights.data(), scene->lights.size() * sizeof(Light),
-               cudaMemcpyHostToDevice);
-
-    cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material),
                cudaMemcpyHostToDevice);
 
     cudaMemset(dev_intersections, 0, num_pixels * sizeof(ShadeableIntersection));

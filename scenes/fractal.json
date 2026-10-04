@@ -31,7 +31,7 @@
         },
         "gold": {
             "TYPE": "Conductor",
-            "ROUGHNESS": 0.4,
+            "ROUGHNESS": 0.5,
             "ANISOTROPY": 0,
             "ETA": [0.18, 0.42, 1.37],
             "K": [3.42, 2.35, 1.77]

@@ -31,6 +31,7 @@ class Scene {
     Scene(std::string filename);
 
     std::vector<Geom> geoms;
+    std::vector<std::string> material_names;
     std::vector<Material> materials;
     std::vector<Light> lights;
     RenderState state;

@@ -105,6 +105,7 @@ void Scene::load_from_json(const std::string& json_name) {
             new_material.bsdf = Dielectric{p.value("IOR", 1.f), p.value("ROUGHNESS", 0.f)};
             new_material.emission = glm::vec3(0);
         }
+        material_names.push_back(name);
         mat_name_to_id[name] = materials.size();
         materials.push_back(new_material);
     }

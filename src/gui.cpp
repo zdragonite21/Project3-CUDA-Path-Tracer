@@ -5,6 +5,7 @@
 #include "imgui_impl_opengl3.h"
 #include "render_settings.h"
 #include "scene.h"
+#include "bsdf/bsdf_gui.cuh"
 #include <cfloat>
 
 void gui::init(GLFWwindow* window) {
@@ -48,6 +49,23 @@ static bool sdf_section(RenderSettings& s) {
                                 ImGuiSliderFlags_Logarithmic);
     return reset;
 }
+
+static bool materials_section(Scene& scene) {
+    bool reset = false;
+    for (int i = 0; i < scene.materials.size(); ++i) {
+        Material& mat = scene.materials[i];
+        ImGui::PushID(i);
+        if (ImGui::TreeNode(scene.material_names[i].c_str())) {
+            reset |= cuda::std::visit([](auto& b) { return draw_bsdf(b); }, mat.bsdf);
+            reset |= ImGui::ColorEdit3("emission", &mat.emission.x,
+                                         ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+    return reset;
+}
+
 static void display_section(RenderSettings& s) {
     ImGui::Checkbox("agx tonemapping", &s.agx);
 }
@@ -73,6 +91,9 @@ bool gui::render_imgui(GuiRefs& refs) {
     }
     if (ImGui::CollapsingHeader("SDF", ImGuiTreeNodeFlags_DefaultOpen)) {
         reset |= sdf_section(s);
+    }
+    if (ImGui::CollapsingHeader("Materials")) {
+        reset |= materials_section(*refs.scene);
     }
     if (ImGui::CollapsingHeader("Camera")) {
         reset |= camera_section(refs.scene->state.camera);
