@@ -22,6 +22,11 @@ struct EnvironmentMap {
     std::vector<glm::vec3> pixels;
 };
 
+struct Emission {
+    float color;
+    glm::vec3 strength;
+};
+
 class Scene {
   private:
     void load_hdri_pixels(const std::string& json_name, const std::string& hdri_path);
@@ -37,6 +42,10 @@ class Scene {
     std::vector<std::string> material_names;
     std::vector<Material> materials;
     std::vector<Light> lights;
+
+    std::vector<Emission> lights_emission;
+    std::vector<Emission> materials_emssion;
+
     RenderState state;
     EnvironmentMap env;
 };

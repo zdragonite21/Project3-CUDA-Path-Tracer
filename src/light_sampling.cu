@@ -103,7 +103,7 @@ __device__ cstd::optional<LightSample> sample_direct_light(glm::vec3 p, glm::vec
     float u = u01(rng);
 
     cstd::optional<LightSample> sample;
-    if (u < s.p_env) {
+    if (s.num_lights == 0 || u < s.p_env) {
         sample = sample_env_light(rng);
         sample->pdf *= pmf_env(s);
         sample->light_idx = -1;

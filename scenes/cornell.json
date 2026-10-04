@@ -22,16 +22,6 @@
         "focal_distance": 12.0
     },
     "materials": {
-        "light_blue": {
-            "type": "diffuse",
-            "color": [0, 0, 0],
-            "emission": [4.8, 8.0, 4.8]
-        },
-        "light_red": {
-            "type": "diffuse",
-            "color": [0, 0, 0],
-            "emission": [12.0, 9.6, 7.2]
-        },
         "diffuse_white": {
             "type": "diffuse",
             "color": [0.98, 0.98, 0.98]
@@ -60,7 +50,10 @@
     "objects": [
         {
             "type": "plane",
-            "material": "light_blue",
+            "light": {
+                "color": [0.6, 1.0, 0.6],
+                "strength": 8.0
+            },
             "transform": {
                 "translation": [-3.0, 9.5, 0.0],
                 "rotation": [180.0, 0.0, 0.0],
@@ -69,7 +62,10 @@
         },
         {
             "type": "plane",
-            "material": "light_red",
+            "light": {
+                "color": [1.0, 0.8, 0.6],
+                "strength": 12.0
+            },
             "transform": {
                 "translation": [3.0, 9.5, 0.0],
                 "rotation": [180.0, 0.0, 0.0],

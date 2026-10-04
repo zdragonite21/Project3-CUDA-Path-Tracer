@@ -164,6 +164,8 @@ void pathtrace_free() {
 
     cudaDestroyTextureObject(env_texture);
     cudaFreeArray(env_array);
+    env_texture = 0;
+    env_array = nullptr;
 
     cudaStreamDestroy(pt_stream);
 

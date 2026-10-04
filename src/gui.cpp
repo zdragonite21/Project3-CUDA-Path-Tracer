@@ -1,11 +1,11 @@
 #include "gui.h"
+#include "bsdf/bsdf_gui.cuh"
 #include "gui_data.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "render_settings.h"
 #include "scene.h"
-#include "bsdf/bsdf_gui.cuh"
 #include <cfloat>
 
 void gui::init(GLFWwindow* window) {
@@ -40,6 +40,25 @@ static bool camera_section(CameraData& cam) {
     return reset;
 }
 
+static bool lights_section(Scene& scene) {
+    bool reset = false;
+    for (int i = 0; i < scene.lights.size(); ++i) {
+        Light& light = scene.lights[i];
+        ImGui::PushID(i);
+        if (ImGui::TreeNode("Light")) {
+            float strength = length(light.emission);
+            glm::vec3 color = strength == 0.f ? glm::vec3(1) : light.emission / strength;
+            reset |= ImGui::ColorEdit3("color", &color.x,
+                                       ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+            reset |= ImGui::DragFloat("strength", &strength, 0.1f, 0.f, FLT_MAX);
+            light.emission = strength * color;
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+    return reset;
+}
+
 static bool sdf_section(RenderSettings& s) {
     bool reset = false;
     reset |= ImGui::SliderInt("max steps", &s.sdf_max_steps, 1, 512);
@@ -58,7 +77,7 @@ static bool materials_section(Scene& scene) {
         if (ImGui::TreeNode(scene.material_names[i].c_str())) {
             reset |= cuda::std::visit([](auto& b) { return draw_bsdf(b); }, mat.bsdf);
             reset |= ImGui::ColorEdit3("emission", &mat.emission.x,
-                                         ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+                                       ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
             ImGui::TreePop();
         }
         ImGui::PopID();
@@ -85,7 +104,7 @@ bool gui::render_imgui(GuiRefs& refs) {
 
     ImGui::Begin(
         "Path Tracer Analytics"); // Create a window called "Hello, world!" and append into it.
-    
+
     ImGui::Text("Traced Depth %d", refs.data->traced_depth);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
                 ImGui::GetIO().Framerate);
@@ -93,7 +112,10 @@ bool gui::render_imgui(GuiRefs& refs) {
     if (ImGui::CollapsingHeader("Render", ImGuiTreeNodeFlags_DefaultOpen)) {
         reset |= render_section(s);
     }
-    if (ImGui::CollapsingHeader("SDF", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Lights")) {
+        reset |= lights_section(*refs.scene);
+    }
+    if (ImGui::CollapsingHeader("SDF")) {
         reset |= sdf_section(s);
     }
     if (ImGui::CollapsingHeader("Materials")) {

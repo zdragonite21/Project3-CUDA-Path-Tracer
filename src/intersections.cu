@@ -1,8 +1,8 @@
 #include "config.h"
 #include "intersections.cuh"
+#include "render_settings.cuh"
 #include "scene_structs.h"
 #include "sdf/sdf_scene.cuh"
-#include "render_settings.cuh"
 
 #include <cfloat>
 
@@ -251,13 +251,21 @@ __global__ void compute_intersections(int num_paths, const PathSegment* path_seg
         if (hit_geom_index == -1) {
             // hit env map
             intersections[path_index].t = -1.0f;
-            isect_mat_ids[path_index] = UINT8_MAX;
+            isect_mat_ids[path_index] = MAT_MISS;
         } else {
             // The ray hits something
             intersections[path_index].t = t_min;
             intersections[path_index].surface_normal = normal;
-            intersections[path_index].light_idx = geoms[hit_geom_index].light_idx;
-            isect_mat_ids[path_index] = geoms[hit_geom_index].material_id;
+            switch (geoms[hit_geom_index].role) {
+            case GeomRole::Light:
+                isect_mat_ids[path_index] = MAT_LIGHT;
+                intersections[path_index].light_idx = geoms[hit_geom_index].id;
+                break;
+            case GeomRole::Material:
+                intersections[path_index].light_idx = -1;
+                isect_mat_ids[path_index] = geoms[hit_geom_index].id;
+                break;
+            }
         }
     }
 }

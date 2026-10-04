@@ -4,11 +4,11 @@
 #include "glm/ext/matrix_float3x3.hpp"
 #include "intersections.cuh"
 #include "light_sampling.cuh"
+#include "math_utils.h"
+#include "render_settings.cuh"
 #include "sampling.cuh"
 #include "scene_structs.h"
 #include "shading.cuh"
-#include "math_utils.h"
-#include "render_settings.cuh"
 
 __device__ __forceinline__ float power_heuristic(float pdf_a, float pdf_b) {
     float a2 = pdf_a * pdf_a;
@@ -56,7 +56,8 @@ estimate_direct_lighting(const PathSegment& path, glm::vec3 p, glm::vec3 nor,
     }
 
     bool is_env = ls->light_idx < 0;
-    glm::vec3 li = is_env ? eval_environment(s.env_texture, ls->wi) : s.lights[ls->light_idx].emission;
+    glm::vec3 li =
+        is_env ? eval_environment(s.env_texture, ls->wi) : s.lights[ls->light_idx].emission;
 
     float w = path.remaining_bounces > 1 ? power_heuristic(ls->pdf, be.pdf) : 1.f;
 
@@ -104,7 +105,7 @@ __global__ void shade_material(int iter, int num_paths, int depth,
 
     PathSegment path = path_segments[idx];
     MatId mat_id = isect_mat_ids[idx];
-    if (mat_id == UINT8_MAX) {
+    if (mat_id == MAT_MISS) {
         glm::vec3 le = eval_environment(light_sampler.env_texture, path.ray.dir);
         float w = 1.f;
 
@@ -121,29 +122,30 @@ __global__ void shade_material(int iter, int num_paths, int depth,
 
     // emissive
 
-    Material material = materials[mat_id];
-    if (is_emissive(material)) {
-
+    if (mat_id == MAT_LIGHT) {
+        const Light& light = light_sampler.lights[shadeable_intersections[idx].light_idx];
 #if LI_MIS
         if (depth == 0 || path.prev_was_delta) {
-            image[path.pixel_index] += path.throughput * material.emission;
+            image[path.pixel_index] += path.throughput * light.emission;
         } else {
             // light sampling
-            const Light& light = light_sampler.lights[shadeable_intersections[idx].light_idx];
             float li_pdf = pmf_area(light_sampler) * pdf_area_light(path.ray, light, geoms);
 
             float w = power_heuristic(path.prev_bsdf_pdf, li_pdf);
-            image[path.pixel_index] += w * path.throughput * material.emission;
+            image[path.pixel_index] += w * path.throughput * light.emission;
         }
 #else
-        image[path.pixel_index] += path.throughput * material.emission;
+        image[path.pixel_index] += path.throughput * light.emission;
 #endif
-
         terminate_path(path_segments[idx]);
         return;
     }
 
     // bounce
+    Material material = materials[mat_id];
+    if (is_emissive(material)) {
+        image[path.pixel_index] += path.throughput * material.emission;
+    }
 
     ShadeableIntersection intersection = shadeable_intersections[idx];
     RngEng rng = make_seeded_rng(iter, idx, depth);

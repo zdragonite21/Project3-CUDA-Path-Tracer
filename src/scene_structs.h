@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bsdf/bsdf_structs.cuh"
+#include <cstdint>
 #include <cuda_runtime.h>
 
 #include <glm/vec2.hpp>
@@ -11,6 +12,8 @@
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
 using MatId = uint8_t;
+static constexpr uint8_t MAT_MISS = UINT8_MAX;
+static constexpr uint8_t MAT_LIGHT = UINT8_MAX - 1;
 
 enum GeomType { Sphere, Cube, Plane, Sdf };
 
@@ -28,17 +31,18 @@ struct Transform {
     glm::mat4 inv_transpose;
 };
 
+// either a light or a material
+enum class GeomRole : uint8_t { Material, Light };
 struct Geom {
     GeomType type;
-    int material_id;
-    int light_idx;
+    GeomRole role;
+
+    int id;
 
     Transform transform;
-
-    Geom() : type{}, material_id{}, light_idx(-1), transform{} {}
 };
 
-// area lights (light -> geom -> material)
+// area lights (light -> geom)
 struct Light {
     glm::vec3 emission;
     int geom_id;

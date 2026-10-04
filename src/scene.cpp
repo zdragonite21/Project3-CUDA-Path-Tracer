@@ -1,6 +1,5 @@
 #include "scene.h"
 
-#include "bsdf/bsdf.cuh"
 #include "config.h"
 #include "utilities.h"
 
@@ -80,6 +79,15 @@ void from_json(const json& j, Material& m) {
         throw std::runtime_error("unknown material type " + type);
     }
     m.emission = j.value("emission", glm::vec3(0.f));
+}
+
+void to_json(json& j, const Light& l) {
+    const float strength = glm::max(l.emission.x, glm::max(l.emission.y, l.emission.z));
+    j = {{"color", strength > 0.f ? l.emission / strength : l.emission}, {"strength", strength}};
+}
+
+void from_json(const json& j, Light& l) {
+    l.emission = j.at("color").get<glm::vec3>() * j.at("strength").get<float>();
 }
 
 void to_json(json& j, const CameraData& c) {
@@ -169,13 +177,20 @@ void Scene::load_from_json(const std::string& json_name) {
     for (const auto& o : data.at("objects")) {
         Geom new_geom{};
         o.at("type").get_to(new_geom.type);
-        new_geom.material_id = mat_name_to_id.at(o.at("material").get<std::string>());
-        if (is_emissive(materials[new_geom.material_id])) {
-            Light new_light{};
-            new_light.geom_id = geoms.size();
-            new_light.emission = materials[new_geom.material_id].emission;
-            new_geom.light_idx = lights.size();
-            lights.push_back(new_light);
+        if (o.contains("material") == o.contains("light")) {
+            throw std::runtime_error("object needs exactly one of material or light");
+        }
+        if (o.contains("light")) {
+            if (new_geom.type != Plane) {
+                throw std::runtime_error("light geoms must be planes");
+            }
+            new_geom.role = GeomRole::Light;
+            new_geom.id = lights.size();
+            Light& l = lights.emplace_back(o["light"].get<Light>());
+            l.geom_id = geoms.size();
+        } else {
+            new_geom.role = GeomRole::Material;
+            new_geom.id = mat_name_to_id.at(o["material"].get<std::string>());
         }
         Transform& t = new_geom.transform;
         o.at("transform").get_to(t);
@@ -206,9 +221,13 @@ void Scene::save_to_json(const std::string& out_path) const {
         data["materials"][material_names[i]] = materials[i];
     }
     for (const Geom& g : geoms) {
-        data["objects"].push_back({{"type", g.type},
-                                   {"material", material_names[g.material_id]},
-                                   {"transform", g.transform}});
+        json o = {{"type", g.type}, {"transform", g.transform}};
+        if (g.role == GeomRole::Light) {
+            o["light"] = lights[g.id];
+        } else {
+            o["material"] = material_names[g.id];
+        }
+        data["objects"].push_back(o);
     }
     data["camera"] = state.camera;
     data["controls"] = state.controls;
