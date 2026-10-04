@@ -40,12 +40,12 @@
             "type": "disney diffuse",
             "color": [0.35, 0.85, 0.35]
         },
-        "gold": {
-            "type": "conductor",
-            "eta": [0.18, 0.42, 1.37],
-            "k": [3.42, 2.35, 1.77],
+        "disney metal": {
+            "type": "disney metal",
+            "color": [0.5, 0.1, 0.1],
+            "edge_tint": [0.1, 0.6, 0.1],
             "roughness": 0.5,
-            "anisotropy": 0
+            "anisotropic": 0
         },
         "glass": {
             "type": "dielectric",
@@ -125,7 +125,7 @@
         },
         {
             "type": "sphere",
-            "material": "gold",
+            "material": "disney metal",
             "transform": {
                 "translation": [-2.0, 2.0, 1.0],
                 "rotation": [0.0, 0.0, 0.0],

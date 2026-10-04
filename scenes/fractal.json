@@ -47,6 +47,13 @@
             "roughness": 0.5,
             "anisotropy": 0
         },
+        "disney metal": {
+            "type": "disney metal",
+            "color": [0.5, 0.1, 0.1],
+            "edge_tint": [0.1, 0.6, 0.1],
+            "roughness": 0.5,
+            "anisotropic": 0
+        },
         "glass": {
             "type": "dielectric",
             "ior": 1.5,
@@ -134,7 +141,7 @@
         },
         {
             "type": "sdf",
-            "material": "diffuse_green",
+            "material": "disney metal",
             "transform": {
                 "translation": [2.0, 2.0, 1.0],
                 "rotation": [0.0, 0.0, 0.0],

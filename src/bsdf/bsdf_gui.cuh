@@ -26,3 +26,11 @@ static bool draw_bsdf(DisneyDiffuse& m) {
     r |= ImGui::SliderFloat("subsurface", &m.subsurface, 0.f, 1.f);
     return r;
 }
+static bool draw_bsdf(DisneyMetal& m) {
+    bool r = false;
+    r |= ImGui::ColorEdit3("color", &m.color.x);
+    r |= ImGui::ColorEdit3("edge_tint", &m.edge_tint.x);
+    r |= ImGui::SliderFloat("roughness", &m.roughness, 0.f, 1.f);
+    r |= ImGui::SliderFloat("anisotropic", &m.anisotropic, 0.f, 1.f);
+    return r;
+}

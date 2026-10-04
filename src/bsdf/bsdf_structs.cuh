@@ -36,13 +36,15 @@ struct DisneyDiffuse {
     }
 };
 
-// struct DisneyMetal {
-//     glm::vec3 base_color;
-//     float roughness;
-//     float anisotropic;
-//     __device__ bool is_delta() const {
-//         return false;
-//     }
-// };
+struct DisneyMetal {
+    glm::vec3 color;
+    glm::vec3 edge_tint;
+    float roughness;
+    float anisotropic;
+    __device__ bool is_delta() const {
+        return false;
+    }
+};
 
-using BsdfVariant = cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse>;
+using BsdfVariant =
+    cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse, DisneyMetal>;

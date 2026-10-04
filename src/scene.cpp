@@ -53,6 +53,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Lambertian, color)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Conductor, eta, k, roughness, anisotropy)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyDiffuse, color, roughness, subsurface)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyMetal, color, edge_tint, roughness, anisotropic)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RenderSettings, max_depth, sdf_max_steps, sdf_hit_eps,
                                    sdf_normal_eps, agx)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CameraConfig, accel, damping, mouse_sens,
@@ -61,7 +62,8 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform, translation, rotation, scale)
 NLOHMANN_JSON_SERIALIZE_ENUM(GeomType,
                              {{Sphere, "sphere"}, {Cube, "cube"}, {Plane, "plane"}, {Sdf, "sdf"}})
 
-static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric", "disney diffuse"};
+static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric", "disney diffuse",
+                                             "disney metal"};
 
 void to_json(json& j, const Material& m) {
     cuda::std::visit([&](const auto& b) { j = b; }, m.bsdf);
@@ -79,6 +81,8 @@ void from_json(const json& j, Material& m) {
         m.bsdf = j.get<Dielectric>();
     } else if (type == "disney diffuse") {
         m.bsdf = j.get<DisneyDiffuse>();
+    } else if (type == "disney metal") {
+        m.bsdf = j.get<DisneyMetal>();
     } else {
         throw std::runtime_error("unknown material type " + type);
     }

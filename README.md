@@ -21,3 +21,4 @@ CUDA Path Tracer
 - https://github.com/bWFuanVzYWth/AgX/blob/main/agx.glsl
 - https://jbaker.graphics/writings/DEC.html
 - https://cseweb.ucsd.edu/~tzli/cse272/wi2026/
+- https://jcgt.org/published/0003/04/03/ (Artist Friendly Metallic Fresnel)

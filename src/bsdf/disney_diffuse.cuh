@@ -50,7 +50,7 @@ __device__ __forceinline__ BsdfEval eval_pdf_disney_diffuse(glm::vec3 wo, glm::v
     float y = bx::abs_cos(wi) + bx::abs_cos(wo);
     float x = fssi * fsso * (1.f / y - 0.5f) + 0.5f;
 
-    glm::vec3 subsurface = m.color * 1.25f * INV_PI * x * bx::abs_cos(wo);
+    glm::vec3 subsurface = m.color * 1.25f * INV_PI * x * bx::abs_cos(wi);
 
     eval.f = (1.f - m.subsurface) * diffuse + m.subsurface * subsurface;
     eval.pdf = c;
