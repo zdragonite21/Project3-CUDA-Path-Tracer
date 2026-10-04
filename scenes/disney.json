@@ -37,7 +37,7 @@
             "color": [0.85, 0.35, 0.35]
         },
         "diffuse_green": {
-            "type": "diffuse",
+            "type": "disney diffuse",
             "color": [0.35, 0.85, 0.35]
         },
         "gold": {

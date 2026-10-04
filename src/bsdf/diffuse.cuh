@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 
 __device__ __forceinline__ BsdfEval eval_pdf_diffuse(glm::vec3 wi, const Lambertian& m) {
-    float c = fmaxf(0.f, bx::cos_theta(wi));
+    float c = bx::non_neg_cos(wi);
     return BsdfEval{m.color * INV_PI * c, c * INV_PI};
 }
 

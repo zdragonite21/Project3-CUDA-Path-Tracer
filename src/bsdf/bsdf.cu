@@ -3,6 +3,7 @@
 #include "conductor.cuh"
 #include "dielectric.cuh"
 #include "diffuse.cuh"
+#include "disney_diffuse.cuh"
 
 struct EvalPdfOp {
     glm::vec3 wo, wi;
@@ -14,6 +15,9 @@ struct EvalPdfOp {
     }
     __device__ BsdfEval operator()(const Dielectric& m) const {
         return eval_pdf_dielectric(wo, wi, m);
+    }
+    __device__ BsdfEval operator()(const DisneyDiffuse& m) const {
+        return eval_pdf_disney_diffuse(wo, wi, m);
     }
 };
 
@@ -28,6 +32,9 @@ struct SampleOp {
     }
     __device__ BsdfSample operator()(const Dielectric& m) const {
         return sample_dielectric(wo, m, rng);
+    }
+    __device__ BsdfSample operator()(const DisneyDiffuse& m) const {
+        return sample_disney_diffuse(wo, m, rng);
     }
 };
 

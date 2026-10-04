@@ -37,7 +37,7 @@
             "color": [0.85, 0.35, 0.35]
         },
         "diffuse_green": {
-            "type": "diffuse",
+            "type": "disney diffuse",
             "color": [0.35, 0.85, 0.35]
         },
         "gold": {
@@ -134,7 +134,7 @@
         },
         {
             "type": "sdf",
-            "material": "gold",
+            "material": "diffuse_green",
             "transform": {
                 "translation": [2.0, 2.0, 1.0],
                 "rotation": [0.0, 0.0, 0.0],

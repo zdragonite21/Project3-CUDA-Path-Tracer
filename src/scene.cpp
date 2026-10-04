@@ -52,15 +52,16 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Emission, color, strength)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Lambertian, color)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Conductor, eta, k, roughness, anisotropy)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyDiffuse, color, roughness, subsurface)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RenderSettings, max_depth, sdf_max_steps, sdf_hit_eps,
                                    sdf_normal_eps, agx)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CameraConfig, accel, damping, mouse_sens,
                                                 scroll_sens)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform,translation, rotation, scale)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform, translation, rotation, scale)
 NLOHMANN_JSON_SERIALIZE_ENUM(GeomType,
                              {{Sphere, "sphere"}, {Cube, "cube"}, {Plane, "plane"}, {Sdf, "sdf"}})
 
-static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric"};
+static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric", "disney diffuse"};
 
 void to_json(json& j, const Material& m) {
     cuda::std::visit([&](const auto& b) { j = b; }, m.bsdf);
@@ -76,6 +77,8 @@ void from_json(const json& j, Material& m) {
         m.bsdf = j.get<Conductor>();
     } else if (type == "dielectric") {
         m.bsdf = j.get<Dielectric>();
+    } else if (type == "disney diffuse") {
+        m.bsdf = j.get<DisneyDiffuse>();
     } else {
         throw std::runtime_error("unknown material type " + type);
     }
@@ -244,7 +247,8 @@ void Scene::set_environment(const std::string& hdri_path) {
     }
     const auto scene_dir = std::filesystem::absolute(filename).parent_path();
     const std::string path =
-        std::filesystem::proximate(std::filesystem::absolute(hdri_path), scene_dir).generic_string();
+        std::filesystem::proximate(std::filesystem::absolute(hdri_path), scene_dir)
+            .generic_string();
     load_hdri_pixels(filename, path);
     env.path = path;
 }

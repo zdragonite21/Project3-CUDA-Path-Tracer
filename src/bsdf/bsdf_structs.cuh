@@ -26,15 +26,23 @@ struct Dielectric {
         return roughness == 0.f;
     }
 };
-// struct DisneyDiffuse {
-//     glm::vec3 base_color;
-//     float roughness;
-//     float subsurface;
-// };
+
+struct DisneyDiffuse {
+    glm::vec3 color;
+    float roughness;
+    float subsurface;
+    __device__ bool is_delta() const {
+        return false;
+    }
+};
+
 // struct DisneyMetal {
 //     glm::vec3 base_color;
 //     float roughness;
 //     float anisotropic;
+//     __device__ bool is_delta() const {
+//         return false;
+//     }
 // };
 
-using BsdfVariant = cuda::std::variant<Lambertian, Conductor, Dielectric>;
+using BsdfVariant = cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse>;
