@@ -54,7 +54,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Conductor, eta, k, roughness, an
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RenderSettings, max_depth, sdf_max_steps, sdf_hit_eps,
                                    sdf_normal_eps, agx)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform, translation, rotation, scale)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CameraConfig, accel, damping, mouse_sens,
+                                                scroll_sens)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform,translation, rotation, scale)
 NLOHMANN_JSON_SERIALIZE_ENUM(GeomType,
                              {{Sphere, "sphere"}, {Cube, "cube"}, {Plane, "plane"}, {Sdf, "sdf"}})
 
@@ -184,6 +186,7 @@ void Scene::load_from_json(const std::string& json_name) {
     }
 
     data.at("camera").get_to(state.camera);
+    state.controls = data.value("controls", CameraConfig{});
     state.image.assign(state.camera.resolution.x * state.camera.resolution.y, glm::vec3(0));
 }
 
@@ -208,6 +211,7 @@ void Scene::save_to_json(const std::string& out_path) const {
                                    {"transform", g.transform}});
     }
     data["camera"] = state.camera;
+    data["controls"] = state.controls;
 
     std::filesystem::create_directories(out_dir);
     std::ofstream(out_path) << data.dump(4);

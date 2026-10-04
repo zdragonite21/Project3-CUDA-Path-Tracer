@@ -8,6 +8,7 @@
 
 struct RenderState {
     CameraData camera;
+    CameraConfig controls;
     unsigned int iterations;
     std::vector<glm::vec3> image;
     std::string image_name;

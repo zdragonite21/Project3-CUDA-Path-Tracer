@@ -261,6 +261,7 @@ void save_scene(bool on_exit) {
     std::string dir = on_exit ? "scene_renders/" : "scene_saves/";
     std::string time = on_exit ? start_time_string : current_time_string();
     std::string path = dir + render_state->image_name + "." + time + ".json";
+    render_state->controls = camera.settings;
     scene->save_to_json(path);
     printf("Saved %s\n", path.c_str());
 }
@@ -289,6 +290,7 @@ void init_camera_from_scene() {
     camera.position = cam.position;
     camera.yaw = glm::atan(-cam.view.x, -cam.view.z);
     camera.pitch = glm::asin(cam.view.y);
+    camera.settings = render_state->controls;
     og_camera = camera;
 }
 
@@ -456,7 +458,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 save_image(false);
             }
             break;
-        case GLFW_KEY_SPACE:
+        case GLFW_KEY_H:
             camera = og_camera;
             needs_reset = true;
             break;
