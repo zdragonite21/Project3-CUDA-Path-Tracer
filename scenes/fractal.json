@@ -173,7 +173,7 @@
         },
         {
             "type": "sdf",
-            "material": "disney glass",
+            "material": "disney bsdf",
             "transform": {
                 "translation": [2.0, 2.0, 1.0],
                 "rotation": [0.0, 0.0, 0.0],

@@ -67,7 +67,6 @@ __device__ __forceinline__ BsdfEval eval_pdf_disney_bsdf(glm::vec3 wo, glm::vec3
     if (lobes.w_sheen > 0.f) {
         BsdfEval sheen_eval = eval_pdf_disney_sheen(wo, wi, DisneySheen{m.color, m.sheen_tint});
         eval.f += lobes.w_sheen * sheen_eval.f;
-        eval.pdf += lobes.p_diffuse * sheen_eval.pdf;
     }
     if (lobes.w_metal > 0.f) {
         BsdfEval metal_eval =
