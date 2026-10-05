@@ -62,25 +62,30 @@ __device__ __forceinline__ BsdfEval eval_pdf_disney_bsdf(glm::vec3 wo, glm::vec3
         BsdfEval diffuse_eval =
             eval_pdf_disney_diffuse(wo, wi, DisneyDiffuse{m.color, r, m.subsurface});
         eval.f += lobes.w_diffuse * diffuse_eval.f;
+        eval.pdf += lobes.p_diffuse * diffuse_eval.pdf;
     }
     if (lobes.w_sheen > 0.f) {
         BsdfEval sheen_eval = eval_pdf_disney_sheen(wo, wi, DisneySheen{m.color, m.sheen_tint});
         eval.f += lobes.w_sheen * sheen_eval.f;
+        eval.pdf += lobes.p_diffuse * sheen_eval.pdf;
     }
     if (lobes.w_metal > 0.f) {
         BsdfEval metal_eval =
-            eval_pdf_disney_metal(wo, wi, DisneyMetal{m.color, m.edge_tint, r, m.anisotropic});
+            eval_pdf_disney_metal_uber(wo, wi, m);
         eval.f += lobes.w_metal * metal_eval.f;
+        eval.pdf += lobes.p_metal * metal_eval.pdf;
     }
     if (lobes.w_clearcoat > 0.f) {
         BsdfEval clearcoat_eval =
             eval_pdf_disney_clearcoat(wo, wi, DisneyClearcoat{m.clearcoat_gloss});
         eval.f += lobes.w_clearcoat * clearcoat_eval.f;
+        eval.pdf += lobes.p_clearcoat * clearcoat_eval.pdf;
     }
     if (lobes.w_glass > 0.f) {
         BsdfEval glass_eval =
             eval_pdf_disney_glass(wo, wi, DisneyGlass{m.color, r, m.anisotropic, m.ior});
         eval.f += lobes.w_glass * glass_eval.f;
+        eval.pdf += lobes.p_glass * glass_eval.pdf;
     }
 
     return eval;
@@ -111,5 +116,7 @@ __device__ __forceinline__ BsdfSample sample_disney_bsdf(glm::vec3 wo, const Dis
         return BsdfSample{};
     }
     BsdfEval e = eval_pdf_disney_bsdf(wo, s.wi, m);
-    return BsdfSample{};
+    s.pdf = e.pdf;
+    s.f = e.f;
+    return s;
 }
