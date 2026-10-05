@@ -44,10 +44,10 @@ static __device__ __forceinline__ float cos_d_phi(const glm::vec3& wa, const glm
                       -1.f, 1.f);
 }
 static __device__ __forceinline__ float abs_dot(const glm::vec3& w, const glm::vec3& n) {
-    return glm::abs(glm::dot(w, n));
+    return fabsf(glm::dot(w, n));
 }
 static __device__ __forceinline__ float abs_cos(const glm::vec3& w) {
-    return abs(cos_theta(w));
+    return fabsf(cos_theta(w));
 }
 static __device__ __forceinline__ float non_neg_cos(const glm::vec3& w) {
     return fmaxf(0.f, cos_theta(w));

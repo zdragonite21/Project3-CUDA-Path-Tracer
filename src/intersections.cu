@@ -112,7 +112,7 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
     glm::vec3 ro = multiply_mv(plane.transform.inverse, glm::vec4(r.org, 1.0f));
     glm::vec3 rd = multiply_mv(plane.transform.inverse, glm::vec4(r.dir, 0.0f));
 
-    if (glm::abs(rd.y) <= numeric::min_cos * glm::length(rd)) {
+    if (fabsf(rd.y) <= numeric::min_cos * glm::length(rd)) {
         return -1;
     }
 
@@ -123,7 +123,7 @@ __host__ __device__ float plane_intersection_test(const Geom& plane, Ray r,
 
     glm::vec3 p_w = ro + rd * t;
 
-    if (glm::abs(p_w.x) > 0.5f || glm::abs(p_w.z) > 0.5f) {
+    if (fabsf(p_w.x) > 0.5f || fabsf(p_w.z) > 0.5f) {
         return -1;
     }
 

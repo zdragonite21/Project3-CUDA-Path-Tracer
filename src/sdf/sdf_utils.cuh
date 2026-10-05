@@ -27,9 +27,9 @@ __device__ float trace_sdf(Ray r, Map map, float t_min, float t_max, float eps) 
 
     for (int i = 0; i < c_settings.sdf_max_steps; i++) {
         float d = map(r.org + r.dir * t);
-        if (glm::abs(d) < eps)
+        if (fabsf(d) < eps)
             return t;
-        t += glm::abs(d);
+        t += fabsf(d);
 
         if (t > t_max) {
             break;

@@ -4,8 +4,11 @@
 #include "dielectric.cuh"
 #include "diffuse.cuh"
 #include "disney_diffuse.cuh"
+#include "disney_bsdf.cuh"
 #include "disney_clearcoat.cuh"
+#include "disney_glass.cuh"
 #include "disney_metal.cuh"
+#include "disney_sheen.cuh"
 
 struct EvalPdfOp {
     glm::vec3 wo, wi;
@@ -26,6 +29,15 @@ struct EvalPdfOp {
     }
     __device__ BsdfEval operator()(const DisneyClearcoat& m) const {
         return eval_pdf_disney_clearcoat(wo, wi, m);
+    }
+    __device__ BsdfEval operator()(const DisneyGlass& m) const {
+        return eval_pdf_disney_glass(wo, wi, m);
+    }
+    __device__ BsdfEval operator()(const DisneySheen& m) const {
+        return eval_pdf_disney_sheen(wo, wi, m);
+    }
+    __device__ BsdfEval operator()(const DisneyBsdf& m) const {
+        return eval_pdf_disney_bsdf(wo, wi, m);
     }
 };
 
@@ -49,6 +61,15 @@ struct SampleOp {
     }
     __device__ BsdfSample operator()(const DisneyClearcoat& m) const {
         return sample_disney_clearcoat(wo, m, rng);
+    }
+    __device__ BsdfSample operator()(const DisneyGlass& m) const {
+        return sample_disney_glass(wo, m, rng);
+    }
+    __device__ BsdfSample operator()(const DisneySheen& m) const {
+        return sample_disney_sheen(wo, m, rng);
+    }
+    __device__ BsdfSample operator()(const DisneyBsdf& m) const {
+        return sample_disney_bsdf(wo, m, rng);
     }
 };
 

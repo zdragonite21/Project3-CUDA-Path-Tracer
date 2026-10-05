@@ -51,6 +51,34 @@
             "type": "disney clearcoat",
             "gloss": 0.5
         },
+        "disney glass": {
+            "type": "disney glass",
+            "color": [1.0, 1.0, 1.0],
+            "roughness": 0.1,
+            "anisotropic": 0,
+            "ior": 1.5
+        },
+        "disney sheen": {
+            "type": "disney sheen",
+            "color": [0.8, 0.3, 0.5],
+            "sheen_tint": 0.5
+        },
+        "disney bsdf": {
+            "type": "disney bsdf",
+            "color": [0.8, 0.5, 0.3],
+            "specular_transmission": 0,
+            "metallic": 0,
+            "subsurface": 0,
+            "specular": 0.5,
+            "roughness": 0.5,
+            "specular_tint": 0,
+            "anisotropic": 0,
+            "sheen": 0,
+            "sheen_tint": 0.5,
+            "clearcoat": 0,
+            "clearcoat_gloss": 1.0,
+            "ior": 1.5
+        },
         "glass": {
             "type": "dielectric",
             "ior": 1.5,
@@ -138,7 +166,7 @@
         },
         {
             "type": "sphere",
-            "material": "glass",
+            "material": "disney glass",
             "transform": {
                 "translation": [2.0, 2.0, 1.0],
                 "rotation": [0.0, 0.0, 0.0],

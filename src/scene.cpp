@@ -55,6 +55,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyDiffuse, color, roughness, subsurface)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyMetal, color, edge_tint, roughness, anisotropic)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyClearcoat, gloss)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyGlass, color, roughness, anisotropic, ior)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneySheen, color, sheen_tint)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyBsdf, color, specular_transmission, metallic,
+                                                subsurface, specular, roughness, specular_tint,
+                                                anisotropic, sheen, sheen_tint, clearcoat,
+                                                clearcoat_gloss, ior)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RenderSettings, max_depth, sdf_max_steps, sdf_hit_eps,
                                    sdf_normal_eps, agx)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CameraConfig, accel, damping, mouse_sens,
@@ -64,7 +70,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(GeomType,
                              {{Sphere, "sphere"}, {Cube, "cube"}, {Plane, "plane"}, {Sdf, "sdf"}})
 
 static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric", "disney diffuse",
-                                             "disney metal", "disney clearcoat"};
+                                             "disney metal", "disney clearcoat", "disney glass",
+                                             "disney sheen", "disney bsdf"};
 
 void to_json(json& j, const Material& m) {
     cuda::std::visit([&](const auto& b) { j = b; }, m.bsdf);
@@ -86,6 +93,12 @@ void from_json(const json& j, Material& m) {
         m.bsdf = j.get<DisneyMetal>();
     } else if (type == "disney clearcoat") {
         m.bsdf = j.get<DisneyClearcoat>();
+    } else if (type == "disney glass") {
+        m.bsdf = j.get<DisneyGlass>();
+    } else if (type == "disney sheen") {
+        m.bsdf = j.get<DisneySheen>();
+    } else if (type == "disney bsdf") {
+        m.bsdf = j.get<DisneyBsdf>();
     } else {
         throw std::runtime_error("unknown material type " + type);
     }

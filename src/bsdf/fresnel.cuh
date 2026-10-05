@@ -5,7 +5,7 @@
 
 __device__ __forceinline__ glm::vec3 fresnel_conductor_eval(float cos_theta_i, const glm::vec3& eta_i,
                                             const glm::vec3& eta_t, const glm::vec3& k) {
-    cos_theta_i = glm::clamp(std::abs(cos_theta_i), 0.f, 1.f);
+    cos_theta_i = glm::clamp(fabsf(cos_theta_i), 0.f, 1.f);
 
     glm::vec3 eta = eta_t / eta_i;
     glm::vec3 eta_k = k / eta_i;
@@ -39,16 +39,16 @@ __device__ __forceinline__ float fresnel_dielectric_eval(float cos_theta_i, floa
         float tmp = eta_i;
         eta_i = eta_t;
         eta_t = tmp;
-        cos_theta_i = std::abs(cos_theta_i);
+        cos_theta_i = fabsf(cos_theta_i);
     }
 
-    float sin_theta_i = glm::sqrt(glm::max(0.f, 1.f - cos_theta_i * cos_theta_i));
+    float sin_theta_i = sqrtf(fmaxf(0.f, 1.f - cos_theta_i * cos_theta_i));
     float sin_theta_t = eta_i / eta_t * sin_theta_i;
     if (sin_theta_t >= 1.f) {
         // total internal reflection
         return 1.f;
     }
-    float cos_theta_t = glm::sqrt(glm::max(0.f, 1.f - sin_theta_t * sin_theta_t));
+    float cos_theta_t = sqrtf(fmaxf(0.f, 1.f - sin_theta_t * sin_theta_t));
 
     float r_parl = ((eta_t * cos_theta_i) - (eta_i * cos_theta_t)) /
                    ((eta_t * cos_theta_i) + (eta_i * cos_theta_t));

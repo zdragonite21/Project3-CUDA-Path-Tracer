@@ -42,7 +42,7 @@ struct DisneyMetal {
     float roughness;
     float anisotropic;
     __device__ bool is_delta() const {
-        return false;
+        return roughness == 0.f;
     }
 };
 
@@ -53,5 +53,43 @@ struct DisneyClearcoat {
     }
 };
 
-using BsdfVariant = cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse,
-                                       DisneyMetal, DisneyClearcoat>;
+struct DisneyGlass {
+    glm::vec3 color;
+    float roughness;
+    float anisotropic;
+    float ior;
+    __device__ bool is_delta() const {
+        return roughness == 0.f;
+    }
+};
+
+struct DisneySheen {
+    glm::vec3 color;
+    float sheen_tint;
+    __device__ bool is_delta() const {
+        return false;
+    }
+};
+
+struct DisneyBsdf {
+    glm::vec3 color;
+    float specular_transmission;
+    float metallic;
+    float subsurface;
+    float specular;
+    float roughness;
+    float specular_tint;
+    float anisotropic;
+    float sheen;
+    float sheen_tint;
+    float clearcoat;
+    float clearcoat_gloss;
+    float ior;
+    __device__ bool is_delta() const {
+        return false;
+    }
+};
+
+using BsdfVariant =
+    cuda::std::variant<Lambertian, Conductor, Dielectric, DisneyDiffuse, DisneyMetal,
+                       DisneyClearcoat, DisneyGlass, DisneySheen, DisneyBsdf>;

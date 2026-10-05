@@ -33,7 +33,7 @@ __forceinline__ __device__ glm::vec3 square_to_disk_concentric(glm::vec2 xi) {
     float r;
     float theta;
 
-    if (abs(x) > abs(y)) {
+    if (fabsf(x) > fabsf(y)) {
         r = x;
         theta = PI / 4.f * y / x;
     } else {

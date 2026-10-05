@@ -1,8 +1,7 @@
 #pragma once
 
 #include "../math_utils.h"
-#include "../sampling.cuh"
-
+#include "../thrust_utils.h"
 #include "bsdf_structs.cuh"
 #include "bxdf_utils.cuh"
 #include <cuda_runtime.h>
