@@ -56,6 +56,7 @@ static bool draw_bsdf(DisneyBsdf& m) {
     r |= ImGui::ColorEdit3("color", &m.color.x);
     r |= ImGui::SliderFloat("specular_transmission", &m.specular_transmission, 0.f, 1.f);
     r |= ImGui::SliderFloat("metallic", &m.metallic, 0.f, 1.f);
+    r |= ImGui::ColorEdit3("edge_tint", &m.edge_tint.x);
     r |= ImGui::SliderFloat("subsurface", &m.subsurface, 0.f, 1.f);
     r |= ImGui::SliderFloat("specular", &m.specular, 0.f, 1.f);
     r |= ImGui::SliderFloat("roughness", &m.roughness, 0.f, 1.f);

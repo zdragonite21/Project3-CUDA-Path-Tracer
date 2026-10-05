@@ -75,6 +75,7 @@ struct DisneyBsdf {
     glm::vec3 color;
     float specular_transmission;
     float metallic;
+    glm::vec3 edge_tint;
     float subsurface;
     float specular;
     float roughness;

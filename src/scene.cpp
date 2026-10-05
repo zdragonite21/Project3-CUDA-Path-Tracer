@@ -53,14 +53,15 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Lambertian, color)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Conductor, eta, k, roughness, anisotropy)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Dielectric, ior, roughness)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyDiffuse, color, roughness, subsurface)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyMetal, color, edge_tint, roughness, anisotropic)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyMetal, color, edge_tint, roughness,
+                                                anisotropic)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyClearcoat, gloss)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyGlass, color, roughness, anisotropic, ior)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneySheen, color, sheen_tint)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DisneyBsdf, color, specular_transmission, metallic,
-                                                subsurface, specular, roughness, specular_tint,
-                                                anisotropic, sheen, sheen_tint, clearcoat,
-                                                clearcoat_gloss, ior)
+                                                edge_tint, subsurface, specular, roughness,
+                                                specular_tint, anisotropic, sheen, sheen_tint,
+                                                clearcoat, clearcoat_gloss, ior)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RenderSettings, max_depth, sdf_max_steps, sdf_hit_eps,
                                    sdf_normal_eps, agx)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CameraConfig, accel, damping, mouse_sens,
@@ -69,9 +70,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Transform, translation, rotation, scale)
 NLOHMANN_JSON_SERIALIZE_ENUM(GeomType,
                              {{Sphere, "sphere"}, {Cube, "cube"}, {Plane, "plane"}, {Sdf, "sdf"}})
 
-static constexpr const char* bsdf_types[] = {"diffuse", "conductor", "dielectric", "disney diffuse",
-                                             "disney metal", "disney clearcoat", "disney glass",
-                                             "disney sheen", "disney bsdf"};
+static constexpr const char* bsdf_types[] = {"diffuse",        "conductor",    "dielectric",
+                                             "disney diffuse", "disney metal", "disney clearcoat",
+                                             "disney glass",   "disney sheen", "disney bsdf"};
 
 void to_json(json& j, const Material& m) {
     cuda::std::visit([&](const auto& b) { j = b; }, m.bsdf);
