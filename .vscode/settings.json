@@ -2,7 +2,7 @@
     "cmake.generator": "Ninja",
     "cmake.buildDirectory": "${workspaceFolder}/build/ninja",
     "cmake.debugConfig": {
-        "args": ["scenes/disney.json"],
+        "args": ["scenes/single_fractal.json"],
         "cwd": "${workspaceFolder}"
     },
     "cmake.exportCompileCommandsFile": true,
