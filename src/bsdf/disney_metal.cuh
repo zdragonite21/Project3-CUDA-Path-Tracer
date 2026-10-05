@@ -52,13 +52,18 @@ __device__ __forceinline__ BsdfEval eval_pdf_disney_metal_uber(glm::vec3 wo, glm
     float rd = m.ior + 1.f;
     float r0 = (rn * rn) / (rd * rd);
 
+    float c = bx::abs_dot(wo, g.wh);
+    float x = 1.f - c;
+    x = x * x * x * x * x; // x^5
+
     glm::vec3 ks = (1.f - m.specular_tint) + m.specular_tint * sheen_c_tint(m.color);
     glm::vec3 c0 = m.specular * r0 * ks * (1.f - m.metallic) + m.metallic * m.color;
+    glm::vec3 f_diel = c0 + (1.f - c0) * x;
 
-    float x = 1.f - bx::abs_dot(wo, g.wh);
-    x = x * x * x * x * x; // x^5
-    glm::vec3 fr = c0 + (1.f - c0) * x;
+    Conductor cd = to_conductor(DisneyMetal{m.color, m.edge_tint, r, m.anisotropic});
+    glm::vec3 f_cond = fresnel_conductor_eval(c, glm::vec3(1.f), cd.eta, cd.k);
 
+    glm::vec3 fr = (1.f - m.metallic) * f_diel + m.metallic * f_cond;
     return BsdfEval{fr * g.dg, g.pdf};
 }
 
