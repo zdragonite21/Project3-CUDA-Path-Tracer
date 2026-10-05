@@ -175,7 +175,7 @@
         },
         {
             "type": "sphere",
-            "material": "disney sheen",
+            "material": "disney bsdf",
             "transform": {
                 "translation": [-1.0, 1.0, -3.0],
                 "rotation": [0.0, 0.0, 0.0],
