@@ -53,8 +53,8 @@
                 "strength": 12.0
             },
             "transform": {
-                "translation": [3.0, 9.5, 0.0],
-                "rotation": [130.0, 0.0, 0.0],
+                "translation": [0.0, 2.0, 0.0],
+                "rotation": [120.0, 0.0, 0.0],
                 "scale": [1.5, 0.6, 1.5]
             }
         },
