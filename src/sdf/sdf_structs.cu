@@ -63,13 +63,14 @@ __device__ __forceinline__ glm::vec3 calc_w(glm::vec3 w, const glm::vec3& p) {
 }
 
 __device__ float MandelbulbDE::operator()(vec3 p) const {
+    constexpr int iterations = 3;
     vec3 w = p;
     float m = dot(w, w);
 
     // vec4 trap = vec4(abs(w), m);
     float dz = 1.f;
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < iterations; ++i) {
         // trigonometric version (MUCH faster than polynomial)
 
         // dz = 8*z^7*dz

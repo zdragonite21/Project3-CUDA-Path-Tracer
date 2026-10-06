@@ -11,6 +11,22 @@ Fractal Path Tracer
   - [LinkedIn](https://linkedin.com/in/zleong), [personal website](https://zacharyleong.com)
 - Tested on: Windows 11, Ultra 9 185H @ 2.30GHz 32GB, RTX 4060 Laptop (personal)
 
+### controls
+- Esc to exit
+- S to save an image in `/saves`
+- H to recent camera at original scene point
+- Ctrl + S to save the scene settings as a json
+- Scroll to move zoom forward
+- Right mouse:
+  - WASD for movement along local axes
+  - Space and Shift for up and down along the y-axis respectively
+  - Scroll to adjust camera acceleration
+
+### disney bsdf
+
+![alt text](img/disney_showcase.png)
+![alt text](img/disney_demo.png)
+
 ### features
 - depth of field (thin lens approx.)
 - material sorting + path compaction
@@ -25,6 +41,9 @@ Fractal Path Tracer
 - imgui + scene loading / scene saving
 - environment lighting
 - agx tonemapping
+
+### more renders
+See `/saves` for more cool renders.
 
 ### references
 
