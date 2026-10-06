@@ -11,7 +11,8 @@ Fractal Path Tracer
   - [LinkedIn](https://linkedin.com/in/zleong), [personal website](https://zacharyleong.com)
 - Tested on: Windows 11, Ultra 9 185H @ 2.30GHz 32GB, RTX 4060 Laptop (personal)
 
-### controls
+## controls
+
 - Esc to exit
 - S to save an image in `/saves`
 - H to recent camera at original scene point
@@ -22,35 +23,61 @@ Fractal Path Tracer
   - Space and Shift for up and down along the y-axis respectively
   - Scroll to adjust camera acceleration
 
-### features
-- depth of field (thin lens approx.)
-- material sorting + path compaction
-- anti-aliasing
-- russian roulette
-- mis + nee (and separate shadow ray kernel)
-- fractal distance estimator ray marching
-- Disney BSDF (Diffuse, Metal, Clearcoat, Glass, Sheen)
+## features
+
+- [anti-aliasing & depth of field](#the-camera) (thin lens approx.)
+- [fractal distance estimator ray marching](#fractals)
+- [Disney BSDF](#disney-bsdf) (Diffuse, Metal, Clearcoat, Glass, Sheen)
     - GGX
     - anistropy
     - emission
-- imgui + scene loading / scene saving
-- environment lighting
-- agx tonemapping
+- [imgui + scene loading](#scenes) / scene saving
+- [environment lighting](#environment-lighting)
+- [agx tonemapping](#color-management)
 
-#### optimizations
-- used intrinsics for fractal evaluation (hot path for raymarching)
-- used CUDA streams to reduce synchronization with Thrust
+### optimizations
+- [mis + nee](#next-event-estimation-and-multiple-importance-sampling) (and separate shadow ray kernel)
+- [russian roulette](#russian-roulette)
+- [material sorting + path compaction](#material-sorting-and-compaction)
+- [intrinsics](#intrinsics) (hot paths during raymarching)
+- [CUDA streams](#cuda-streams) (reducing synchronization with Thrust)
 
-### disney bsdf
+## next event estimation and multiple importance sampling
+![alt text](img/cornell_pic.png)
+
+### russian roulette
+
+### environment lighting
+
+## disney bsdf
 
 ![alt text](img/disney_showcase.png)
 ![alt text](img/disney_demo.png)
 
-### anti-aliasing
+## the camera
 
-### performance analysis
+anti aliasing
 
-### more renders
+### depth of field
+
+## fractals
+
+### distance estimators
+### raymarching
+
+## scenes
+
+### color management
+
+## performance analysis
+
+### material sorting and compaction
+
+#### cuda streams
+
+### intrinsics
+
+## more renders
 ![alt text](img/mandelbox_setup.png)
 ![alt text](img/mandelbox_blue_and_black.png)
 ![alt text](img/mandelbox_scifi.png)
@@ -64,15 +91,15 @@ Fractal Path Tracer
 ![alt text](img/mandelbulb_reflection.png)
 ![alt text](img/purple_mandelbulb.png)
 See `/saves` and `/renders` for more cool renders.
-### bloopers
+## bloopers
 ![alt text](img/fake_fish_eye.png)
 ![alt text](img/refraction_distortion.png)
 ![alt text](img/black_and_white.png)
 ![alt text](img/too_few_march_steps.png)
 ![alt text](img/mandelbulb_lobotomized.png)
-### build instructions
+## build instructions
 
-### references
+## references
 - my CIS 4610 path tracer
 - pbrt v4
 - agx tonemapping: https://github.com/bWFuanVzYWth/AgX/blob/main/agx.glsl
