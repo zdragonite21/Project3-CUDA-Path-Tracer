@@ -12,18 +12,6 @@
     - [LinkedIn](https://linkedin.com/in/zleong), [personal website](https://zacharyleong.com)
 - Tested on: Windows 11, Ultra 9 185H @ 2.30GHz 32GB, RTX 4060 Laptop (personal)
 
-## controls
-
-- Esc to exit
-- S to save an image in `/saves`
-- H to recenter camera at original scene point
-- Ctrl + S to writes the scene settings to `/scene-saves`
-- Scroll to move zoom forward
-- Right mouse:
-    - WASD for movement along local axes
-    - Space and Shift for up and down along the y-axis respectively
-    - Scroll to adjust camera acceleration
-
 ## features
 
 - [anti-aliasing & depth of field](#the-camera) (thin lens approx.)
@@ -174,6 +162,8 @@ See `/saves` and `/renders` for more cool renders.
 |    ![alt text](img/black_and_white.png)     |   ![alt text](img/black_and_white2.png)    |
 | ![alt text](img/mandelbulb_lobotomized.png) |  ![alt text](img/too_few_march_steps.png)  |
 
+
+
 ## build instructions
 
 requirements: windows, nvidia gpu, CUDA Toolkit 13.0, Visual Studio 2022 (MSVC), CMake and Ninja.
@@ -191,6 +181,20 @@ Found in `src/config.h`
 - COMPACT_TERMINATED
 - LI_MIS
 - RUSSIAN_ROULETTE
+
+
+## controls
+
+- Esc to exit
+- S to save an image in `/saves`
+- H to recenter camera at original scene point
+- Ctrl + S to writes the scene settings to `/scene-saves`
+- Scroll to move zoom forward
+- Right mouse:
+    - WASD for movement along local axes
+    - Space and Shift for up and down along the y-axis respectively
+    - Scroll to adjust camera acceleration
+
 
 ## future features
 
