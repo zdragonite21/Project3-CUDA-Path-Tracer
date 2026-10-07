@@ -1,7 +1,7 @@
 # Fractal Path Tracer
 
-![alt text](img/mandelbox_blue_metallic.png)
 ![alt text](img/mandelbox_orange_gui.png)
+![alt text](img/mandelbox_blue_metallic.png)
 ![alt text](img/mandelbulb_purple_metallic.png)
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
