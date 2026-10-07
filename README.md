@@ -1,7 +1,7 @@
 # Fractal Path Tracer
 
-![alt text](img/mandelbox_light_glass.png)
 ![alt text](img/mandelbox_blue_metallic.png)
+![alt text](img/mandelbox_light_glass.png)
 ![alt text](img/mandelbulb_purple_metallic.png)
 ![alt text](img/mandelbox_orange_gui.png)
 ![alt text](img/mandelbox_metallic.png)
@@ -75,33 +75,50 @@ anti aliasing
 
 ## performance analysis
 
+Material sorting is off by default, since it was slower in my [tests](#material-sorting). Time is total kernel time from Nsight Systems per iteration.
+
 ### MIS + NEE
-|        |                             off                              |                             on                              |
-| :----: | :----------------------------------------------------------: | :---------------------------------------------------------: |
-|  open  |    ![alt text](profiling/cornell_mis_off/render.png)     |    ![alt text](profiling/cornell_mis_on/render.png)     |
 
 ![alt text](profiling/graph_mis.png)
+
+|      |                        off                        |                        on                        |
+| :--: | :-----------------------------------------------: | :----------------------------------------------: |
+| open | ![alt text](profiling/cornell_mis_off/render.png) | ![alt text](profiling/cornell_mis_on/render.png) |
+
+The graphs show that MIS costs about 1 ms more per iteration, but the image converges significantly faster (the right image has visibly less noise).
+
 ### compaction
+
+![alt text](profiling/graph_compaction.png)
 
 |        |                             off                              |                             on                              |
 | :----: | :----------------------------------------------------------: | :---------------------------------------------------------: |
 |  open  |    ![alt text](profiling/cornell_compact_off/render.png)     |    ![alt text](profiling/cornell_compact_on/render.png)     |
 | closed | ![alt text](profiling/cornell_closed_compact_off/render.png) | ![alt text](profiling/cornell_closed_compact_on/render.png) |
 
-![alt text](profiling/graph_compaction.png)
+The open box with compaction is about 30% faster but the closed box is about 5% slower. This is likely because rays in the open box escape and terminate when they hit the HDRI, while rays in the closed box only termiante via russian roulette, so the overhead of performing the compaction (non-stable) outweighs the benefit. 
+
 
 ### material sorting
+![alt text](profiling/graph_sort.png)
 
 |                            off                             |                            on                             |
 | :--------------------------------------------------------: | :-------------------------------------------------------: |
-| ![alt text](profiling/cornell_sort_off/render.png) | ![alt text](profiling/cornell_sort_on/render.png) |
+|     ![alt text](profiling/cornell_sort_off/render.png)     |     ![alt text](profiling/cornell_sort_on/render.png)     |
 | ![alt text](profiling/disney_showcase_sort_off/render.png) | ![alt text](profiling/disney_showcase_sort_on/render.png) |
 
-![alt text](profiling/graph_sort.png)
+Material sorting is significantly slower for each scene (including the disney showcase, which has 12 materials), likely because the overhead of performing radix sort (on `uint8_t` mat ids) and scattering the pathsegments and intersection data (zipped thrust tuple) outweights the potential benefit from reducing warp divergence, especially since our BSDFs are still relatively cheap to compute.
 
-#### cuda streams
+### cuda streams
+
+I used cuda streams for all the kernels I launch (include thrust) so that sorting and compaction can happen asynchronously, but ordered within the stream.
 
 ### intrinsics
+
+I didn't do a formal measurement of this: using cuda intrinsics in the distance estimator hot paths (for trig functions and exponents) helped significantly increase the framerate (about 10x, empirically). The CUDA Best Practices article recommended to not enable project wide intrinsics, but to only uses them in specific places.
+
+### other notes
+We update the `num_paths` variable each iteration after compacting to reduce the number of blocks we launch, however this performs a synchronization between the device and the host. I plan to profile and determine if this is a bottleneck in the future.
 
 ## more renders
 
@@ -129,6 +146,22 @@ See `/saves` and `/renders` for more cool renders.
 | ![alt text](img/mandelbulb_lobotomized.png) |  ![alt text](img/too_few_march_steps.png)  |
 
 ## build instructions
+
+requirements: windows, nvidia gpu, CUDA Toolkit 13.0, Visual Studio 2022 (MSVC), CMake and Ninja.
+
+Run these from a VS 2022 cmd from the repo root dir:
+```
+cmake -S . -B build/ninja -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/ninja
+build\ninja\bin\cis565_path_tracer.exe scenes\cornell.json
+```
+
+### feature toggles
+Found in `src/config.h`
+- SORT_PATHS
+- COMPACT_TERMINATED
+- LI_MIS
+- RUSSIAN_ROULETTE
 
 ## future features
 
