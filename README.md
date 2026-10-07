@@ -14,14 +14,14 @@
 
 ## features
 
-- [anti-aliasing & depth of field](#the-camera) (thin lens approx.)
-- [fractal distance estimator ray marching](#fractals)
 - [Disney BSDF](#disney-bsdf) (Diffuse, Metal, Clearcoat, Glass, Sheen)
     - GGX
     - anistropy
     - emission
-- [imgui + scene loading](#scenes) / scene saving
 - [environment lighting](#environment-lighting)
+- [anti-aliasing & depth of field](#the-camera) (thin lens approx.)
+- [fractal distance estimator ray marching](#fractals)
+- [imgui + scene loading](#scenes) / scene saving
 - [agx tonemapping](#color-management)
 
 ### optimizations
@@ -31,20 +31,6 @@
 - [material sorting + path compaction](#material-sorting-and-compaction)
 - [intrinsics](#intrinsics) (hot paths during raymarching)
 - [CUDA streams](#cuda-streams) (reducing synchronization with Thrust)
-
-## next event estimation and multiple importance sampling
-
-![alt text](img/cornell_pic.png)
-
-A technique introduced by Eric Veach which significantly improves convergence rates by essentially sampling additional paths that contribute light per iteration. See the [performance analysis](#mis--nee) section for results.
-
-### russian roulette
-
-Unbaised termiantion of paths based on their contribution, while boosting the contribution of surviving paths.
-
-### environment lighting
-
-Used cuda texture samplers to sample high dynamic range environment maps (uniformly). 
 
 ## disney bsdf
 
@@ -59,6 +45,20 @@ Value labels: 0.0, 0.2, 0.4, 0.8, 1.0
 I implemented the Disney BSDF by following HW1 from this [USCD course](https://cseweb.ucsd.edu/~tzli/cse272/wi2026/). I used `std::variants` when initially testing each BRDF initially, and then combined them into an Uber shader.
 
 I will write more on this in the future.
+
+## next event estimation and multiple importance sampling
+
+![alt text](img/cornell_pic.png)
+
+A technique introduced by Eric Veach which significantly improves convergence rates by essentially sampling additional paths that contribute light per iteration. See the [performance analysis](#mis--nee) section for results.
+
+### russian roulette
+
+Unbaised termiantion of paths based on their contribution, while boosting the contribution of surviving paths.
+
+### environment lighting
+
+Used cuda texture samplers to sample high dynamic range environment maps (uniformly). 
 
 ## the camera
 
