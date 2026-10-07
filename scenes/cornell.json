@@ -1,6 +1,6 @@
 {
     "file": "cornell",
-    "iterations": 5000,
+    "iterations": 1000,
     "settings": {
         "max_depth": 8,
         "sdf_max_steps": 128,
@@ -17,7 +17,7 @@
         "position": [0.0, 5.0, 10.5],
         "look_at": [0.0, 5.0, 0.0],
         "up": [0.0, 1.0, 0.0],
-        "fovy": 45.0,
+        "fovy": 90.0,
         "lens_radius": 0.0,
         "focal_distance": 12.0
     },

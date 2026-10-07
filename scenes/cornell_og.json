@@ -1,6 +1,6 @@
 {
     "file": "cornell",
-    "iterations": 5000,
+    "iterations": 1000,
     "settings": {
         "max_depth": 8,
         "sdf_max_steps": 128,

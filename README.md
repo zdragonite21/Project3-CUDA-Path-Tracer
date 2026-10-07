@@ -1,5 +1,5 @@
-Fractal Path Tracer
-================
+# Fractal Path Tracer
+
 ![alt text](img/mandelbox_light_glass.png)
 ![alt text](img/mandelbox_blue_metallic.png)
 ![alt text](img/mandelbulb_purple_metallic.png)
@@ -7,21 +7,22 @@ Fractal Path Tracer
 ![alt text](img/mandelbox_metallic.png)
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
+
 - Zachary Leong
-  - [LinkedIn](https://linkedin.com/in/zleong), [personal website](https://zacharyleong.com)
+    - [LinkedIn](https://linkedin.com/in/zleong), [personal website](https://zacharyleong.com)
 - Tested on: Windows 11, Ultra 9 185H @ 2.30GHz 32GB, RTX 4060 Laptop (personal)
 
 ## controls
 
 - Esc to exit
 - S to save an image in `/saves`
-- H to recent camera at original scene point
-- Ctrl + S to save the scene settings as a json
+- H to recenter camera at original scene point
+- Ctrl + S to writes the scene settings to `/scene-saves`
 - Scroll to move zoom forward
 - Right mouse:
-  - WASD for movement along local axes
-  - Space and Shift for up and down along the y-axis respectively
-  - Scroll to adjust camera acceleration
+    - WASD for movement along local axes
+    - Space and Shift for up and down along the y-axis respectively
+    - Scroll to adjust camera acceleration
 
 ## features
 
@@ -36,6 +37,7 @@ Fractal Path Tracer
 - [agx tonemapping](#color-management)
 
 ### optimizations
+
 - [mis + nee](#next-event-estimation-and-multiple-importance-sampling) (and separate shadow ray kernel)
 - [russian roulette](#russian-roulette)
 - [material sorting + path compaction](#material-sorting-and-compaction)
@@ -43,6 +45,7 @@ Fractal Path Tracer
 - [CUDA streams](#cuda-streams) (reducing synchronization with Thrust)
 
 ## next event estimation and multiple importance sampling
+
 ![alt text](img/cornell_pic.png)
 
 ### russian roulette
@@ -63,6 +66,7 @@ anti aliasing
 ## fractals
 
 ### distance estimators
+
 ### raymarching
 
 ## scenes
@@ -71,35 +75,77 @@ anti aliasing
 
 ## performance analysis
 
-### material sorting and compaction
+### MIS + NEE
+|        |                             off                              |                             on                              |
+| :----: | :----------------------------------------------------------: | :---------------------------------------------------------: |
+|  open  |    ![alt text](profiling/cornell_mis_off/render.png)     |    ![alt text](profiling/cornell_mis_on/render.png)     |
+
+![alt text](profiling/graph_mis.png)
+### compaction
+
+|        |                             off                              |                             on                              |
+| :----: | :----------------------------------------------------------: | :---------------------------------------------------------: |
+|  open  |    ![alt text](profiling/cornell_compact_off/render.png)     |    ![alt text](profiling/cornell_compact_on/render.png)     |
+| closed | ![alt text](profiling/cornell_closed_compact_off/render.png) | ![alt text](profiling/cornell_closed_compact_on/render.png) |
+
+![alt text](profiling/graph_compaction.png)
+
+### material sorting
+
+|                            off                             |                            on                             |
+| :--------------------------------------------------------: | :-------------------------------------------------------: |
+| ![alt text](profiling/cornell_sort_off/render.png) | ![alt text](profiling/cornell_sort_on/render.png) |
+| ![alt text](profiling/disney_showcase_sort_off/render.png) | ![alt text](profiling/disney_showcase_sort_on/render.png) |
+
+![alt text](profiling/graph_sort.png)
 
 #### cuda streams
 
 ### intrinsics
 
 ## more renders
-![alt text](img/mandelbox_setup.png)
-![alt text](img/mandelbox_blue_and_black.png)
-![alt text](img/mandelbox_scifi.png)
-![alt text](img/green_mandelbox.png)
-![alt text](img/mandelbulb_unfocused.png)
-![alt text](img/cinematic_spheres.png)
-![alt text](img/gold_mandelbulb.png)
-![alt text](img/glass_mandelbulb.png)
-![alt text](img/iridescent_mandelbulb.png)
-![alt text](img/metallic_blue_mandelbulb.png)
-![alt text](img/mandelbulb_reflection.png)
-![alt text](img/purple_mandelbulb.png)
+
+|                                            |                                               |
+| :----------------------------------------: | :-------------------------------------------: |
+|    ![alt text](img/mandelbox_setup.png)    | ![alt text](img/mandelbox_blue_and_black.png) |
+|    ![alt text](img/mandelbox_scifi.png)    |     ![alt text](img/green_mandelbox.png)      |
+| ![alt text](img/mandelbulb_unfocused.png)  |    ![alt text](img/cinematic_spheres.png)     |
+|    ![alt text](img/gold_mandelbulb.png)    |    ![alt text](img/purple_mandelbulb.png)     |
+| ![alt text](img/iridescent_mandelbulb.png) | ![alt text](img/metallic_blue_mandelbulb.png) |
+| ![alt text](img/mandelbulb_reflection.png) |     ![alt text](img/glass_mandelbulb.png)     |
+
 See `/saves` and `/renders` for more cool renders.
+
+## timelapse
+
+![alt text](gifs/renders_320_github.gif)
+
 ## bloopers
-![alt text](img/fake_fish_eye.png)
-![alt text](img/refraction_distortion.png)
-![alt text](img/black_and_white.png)
-![alt text](img/too_few_march_steps.png)
-![alt text](img/mandelbulb_lobotomized.png)
+
+|                                             |                                            |
+| :-----------------------------------------: | :----------------------------------------: |
+|     ![alt text](img/fake_fish_eye.png)      | ![alt text](img/refraction_distortion.png) |
+|    ![alt text](img/black_and_white.png)     |   ![alt text](img/black_and_white2.png)    |
+| ![alt text](img/mandelbulb_lobotomized.png) |  ![alt text](img/too_few_march_steps.png)  |
+
 ## build instructions
 
+## future features
+
+- [ ] render more fractals!
+- [ ] .exr output for hdr images
+- [ ] per intersection shading (procedural materials)
+- [ ] further optimizations
+    - [ ] CUB
+    - [ ] env map mis
+    - [ ] relaxed sphere tracing
+    - [ ] low-discrepancy sampling (sobol + blue noise)
+- [ ] light trees
+- [ ] homogenous volumetric rendering
+- [ ] photon mapping
+
 ## references
+
 - my CIS 4610 path tracer
 - pbrt v4
 - agx tonemapping: https://github.com/bWFuanVzYWth/AgX/blob/main/agx.glsl

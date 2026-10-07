@@ -63,7 +63,7 @@ __device__ __forceinline__ glm::vec3 calc_w(glm::vec3 w, const glm::vec3& p) {
 }
 
 __device__ float MandelbulbDE::operator()(vec3 p) const {
-    constexpr int iterations = 3;
+    constexpr int iterations = 1;
     vec3 w = p;
     float m = dot(w, w);
 
