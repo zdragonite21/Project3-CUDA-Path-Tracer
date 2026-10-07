@@ -48,30 +48,59 @@
 
 ![alt text](img/cornell_pic.png)
 
+A technique introduced by Eric Veach which significantly improves convergence rates by essentially sampling additional paths that contribute light per iteration. See the [performance analysis](#mis--nee) section for results.
+
 ### russian roulette
 
+Unbaised termiantion of paths based on their contribution, while boosting the contribution of surviving paths.
+
 ### environment lighting
+
+Used cuda texture samplers to sample high dynamic range environment maps (uniformly). 
 
 ## disney bsdf
 
 ![alt text](img/disney_showcase.png)
 ![alt text](img/disney_demo.png)
 
+
+Material labels: subsurface, metallic, specular, specular tint, roughness, ansitropic, sheen, sheen tint, clearcoat, clearcoat roughness, transmission, transmission roughness
+
+Value labels: 0.0, 0.2, 0.4, 0.8, 1.0
+
+I implemented the Disney BSDF by following HW1 from this [USCD course](https://cseweb.ucsd.edu/~tzli/cse272/wi2026/). I used `std::variants` when initially testing each BRDF initially, and then combined them into an Uber shader.
+
+I will write more on this in the future.
+
 ## the camera
 
-anti aliasing
+anti aliasing: performing sub-pixel samples to soften edges (otherwise we'd be sampling the same position at each iteration, leading to visible pixel aliasing).
 
 ### depth of field
 
+Used thin lens approximation, where samples are taken from a circular disk.
+
 ## fractals
+- mandelbulb
+- mandelbox
+
+Fractls are first intersected with a bounding sdf sphere before evaluating.
 
 ### distance estimators
 
+Fractal formulas do not give exact signed distances! There exists heuristics that can be applied to estimate a conservative distance to fractals (hence, distance estimators), which can be used for raymarching.
+
 ### raymarching
+
+Performed classic sphere marching until we reach a certain threshold or max iteration count.
 
 ## scenes
 
+Added a fly camera (UE5 style), ImGui for render, controls, camera, sdfs, material settings, and save/load functionality for scenes. Scenes are automatically saved on exit so you don't lose your settings!
+
 ### color management
+
+I used Agx tonemapping, wiht gamma correction.
 
 ## performance analysis
 
