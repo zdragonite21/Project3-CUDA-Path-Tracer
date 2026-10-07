@@ -1,10 +1,8 @@
 # Fractal Path Tracer
 
 ![alt text](img/mandelbox_blue_metallic.png)
-![alt text](img/mandelbox_light_glass.png)
-![alt text](img/mandelbulb_purple_metallic.png)
 ![alt text](img/mandelbox_orange_gui.png)
-![alt text](img/mandelbox_metallic.png)
+![alt text](img/mandelbulb_purple_metallic.png)
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
@@ -74,6 +72,9 @@ Used thin lens approximation, where samples are taken from a circular disk.
 
 Fractls are first intersected with a bounding sdf sphere before evaluating.
 
+![alt text](img/mandelbox_light_glass.png)
+*mandelbox*
+
 ### distance estimators
 
 Fractal formulas do not give exact signed distances! There exists heuristics that can be applied to estimate a conservative distance to fractals (hence, distance estimators), which can be used for raymarching.
@@ -85,6 +86,8 @@ Performed classic sphere marching until we reach a certain threshold or max iter
 ## scenes
 
 Added a fly camera (UE5 style), ImGui for render, controls, camera, sdfs, material settings, and save/load functionality for scenes. Scenes are automatically saved on exit so you don't lose your settings!
+
+![alt text](img/mandelbox_metallic.png)
 
 ### color management
 
